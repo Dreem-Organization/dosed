@@ -38,10 +38,6 @@ class Logger:
         self.output_dir = output_dir if output_dir is not None else tempfile.mkdtemp()
         if not os.path.isdir(self.output_dir):
             os.mkdir(self.output_dir)
-        else:
-            print(
-                colorize("Warning: Log dir {} already exists!".format(
-                    self.output_dir) + "Storing info there anyway.", 'red'))
         self.output_file = osp.join(self.output_dir, output_fname)
         print(colorize("Logging data to %s" % self.output_file, 'green',
                        bold=True))
