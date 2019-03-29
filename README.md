@@ -120,4 +120,4 @@ and of variable *events*. e.g.
   
 #### 3. Training and testing
 
-The jupyter notebook *train\_and\_evaluate\_dosed.ipynb* goes through the training process with more detail, describing all important training parameters. It also explains how to generate predictions, and provides a plot of a spindle detection.
+The jupyter notebook *train\_and\_evaluate\_dosed.ipynb* goes through the training process in detail, describing all important training parameters. It also explains how to generate predictions, and provides a plot of a spindle detection.
