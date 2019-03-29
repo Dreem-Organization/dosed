@@ -1,6 +1,3 @@
-import os 
-print(os.path.dirname(os.path.realpath(__file__)))
-
 from dosed.utils import encode, decode
 import torch
 
@@ -17,6 +14,4 @@ def test_encode_decode():
     localizations = encode(localizations_default, localizations_default)
     is_it_retrieved = decode(localizations, localizations_default)
 
-    localizations_default == is_it_retrieved
-    print(localizations_default)
-    print(is_it_retrieved)
+    assert ((localizations_default - is_it_retrieved).numpy() > 1e-4).sum() == 0
