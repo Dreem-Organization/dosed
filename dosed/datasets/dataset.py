@@ -87,7 +87,7 @@ class EventDataset(Dataset):
             number_of_events = 0
             for event in self.data_index["events"]:
                 event_filename = record + "_{}.mm".format(event["name"])
-                number_of_events += event["size_{}".format(event["name"])][event_filename]
+                number_of_events += event["size"][event_filename]
 
                 if os.path.isfile(event_filename):  # some records might not have some events
                     self.events[record][event["name"]] = {}
@@ -95,7 +95,7 @@ class EventDataset(Dataset):
                         event_filename,
                         dtype='float32',
                         mode='r',
-                        shape=(2, event["size_{}".format(event["name"])][event_filename])
+                        shape=(2, event["size"][event_filename])
                     ) * self.fs
                     self.events[record][event["name"]]["label"] = event["label"]
             self.index_to_record_event.extend([

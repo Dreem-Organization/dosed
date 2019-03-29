@@ -10,8 +10,8 @@ def remove_root(index):
     index["signals"]["size"] = {
         k.split("/")[-1]: v for k, v in index["signals"]["size"].items()
     }
-    index["events"][0]["size_spindle"] = {
-        k.split("/")[-1]: v for k, v in index["events"][0]["size_spindle"].items()
+    index["events"][0]["size"] = {
+        k.split("/")[-1]: v for k, v in index["events"][0]["size"].items()
     }
     index["records"] = set([x.split("/")[-1] for x in index["records"]])
     return index

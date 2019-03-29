@@ -130,7 +130,7 @@ def h5_to_memmap(h5_directory,
 
         signal["size"] = {}
         for event in events:
-            event["size_{}".format(event["name"])] = {}
+            event["size"] = {}
 
         index = {
             "signals": signal,
@@ -158,14 +158,10 @@ def h5_to_memmap(h5_directory,
 
         for record_num, _ in enumerate(records):
             record_info = events_info[record_num]
-            signal["size"][record_info["signal_name"]] = record_info[
-                "signal_size"]
+            signal["size"][record_info["signal_name"]] = record_info["signal_size"]
             for num_event, event in enumerate(index["events"]):
                 for consensus, _ in enumerate(event):
-                    event["size_{}".format(event["name"])][
-                        record_info[event["name"]][
-                            "name_{}".format(num_event)]] = \
-                        record_info[event["name"]][
-                            "events_{}".format(num_event)]
+                    event["size"][record_info[event["name"]]["name_{}".format(num_event)]] = \
+                        record_info[event["name"]]["events_{}".format(num_event)]
 
         json.dump(index, open(memmap_directory + "index.json", "w"), indent=4)
