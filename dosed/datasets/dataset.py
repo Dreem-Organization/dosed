@@ -53,6 +53,7 @@ class EventDataset(Dataset):
         self.window_size = int(self.window * self.fs)
         self.input_size = self.window_size
         self.minimum_overlap = minimum_overlap
+        self.number_of_channels = len(self.data_index["signals"]["h5_paths"])
 
         # Open signals and events
         self.signals = {}
@@ -67,7 +68,7 @@ class EventDataset(Dataset):
                 signal_filename,
                 dtype='float32',
                 mode='r',
-                shape=(len(self.data_index["signals"]["h5_paths"]),
+                shape=(self.number_of_channels,
                        self.data_index["signals"]["size"][signal_filename]))[:, ::downsampling]
 
             signal_size = self.signals[record]["data"].shape[1]
