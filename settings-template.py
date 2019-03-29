@@ -1,7 +1,7 @@
 import os
 
 
-BASE_DIRECTORY = "./data/"
+BASE_DIRECTORY = os.path.dirname(os.path.realpath(__file__)) + "/data/"
 DOWNLOAD_DIRECTORY = BASE_DIRECTORY + "downloads/"
 MEMMAP_DIRECTORY = BASE_DIRECTORY + "memmap/"
 H5_DIRECTORY = BASE_DIRECTORY + "h5/"

@@ -4,7 +4,7 @@ import os
 import tqdm
 
 
-def download_dir(client, resource, local='/tmp', bucket='dreem-dosed'):
+def download_dir(client, resource, local='/tmp', bucket='dreem-dosed-minimum-example'):
     paginator = client.get_paginator('list_objects')
     for result in paginator.paginate(Bucket=bucket):
         if result.get('CommonPrefixes') is not None:
