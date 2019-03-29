@@ -5,3 +5,4 @@ boto3==1.9.31
 joblib==0.12.5
 matplotlib==3.0.2
 pyedflib==0.1.14
+torch==1.0.0
