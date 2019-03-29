@@ -12,7 +12,7 @@ DOSED in a deep learning approach to jointly predicts locations, durations and t
 It was inspired by computer vision object detectors such as YOLO and SSD and relies on a convolutional neural network that builds a feature representation from raw input signals,
  as well as two modules performing localization and classification respectively. DOSED can be easily adapt to detect events of any sort.
  
- ![dosed_detection_image](https://github.com/Dreem-Organization/dosed/blob/code_release/dosed_detection.png)
+ ![dosed_detection_image](https://github.com/Dreem-Organization/dosed/blob/master/dosed_detection.png)
 
 ### Citing DOSED
 
