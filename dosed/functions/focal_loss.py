@@ -28,8 +28,7 @@ class DOSEDFocalLoss(DOSEDSimpleLoss):
             classifications[index_expanded.gt(0)
                             ].view(-1, self.number_of_classes),
             classifications_target[index.gt(0)],
-            size_average=False,
-            reduce=False
+            reduction="none",
         )
         pt = torch.exp(-cross_entropy)
         loss_classification = (

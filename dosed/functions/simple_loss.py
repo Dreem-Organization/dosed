@@ -20,7 +20,7 @@ class DOSEDSimpleLoss(nn.Module):
         loss_localization = F.smooth_l1_loss(
             localizations[positive_expanded].view(-1, 2),
             localizations_target[positive_expanded].view(-1, 2),
-            size_average=False)
+            reduction="sum")
         return loss_localization
 
     def get_negative_index(self, positive, classifications,
@@ -36,7 +36,7 @@ class DOSEDSimpleLoss(nn.Module):
             classifications[index_expanded.gt(0)
                             ].view(-1, self.number_of_classes),
             classifications_target[index.gt(0)],
-            size_average=False
+            reduction="sum",
         )
         return loss_classification
 
