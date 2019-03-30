@@ -1,6 +1,8 @@
+import os
 from settings import MINIMUM_EXAMPLE_SETTINGS
 import boto3
-import os
+from botocore import UNSIGNED
+from botocore.client import Config
 import tqdm
 
 
@@ -17,6 +19,6 @@ def download_dir(client, resource, local='/tmp', bucket='dreem-dosed-minimum-exa
             resource.meta.client.download_file(bucket, file.get('Key'), dest_pathname)
 
 
-client = boto3.client('s3')
+client = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 resource = boto3.resource('s3')
 download_dir(client, resource, MINIMUM_EXAMPLE_SETTINGS["download_directory"])

@@ -2,11 +2,13 @@
 
 """
 
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
-from dosed.functions import Detection
-from collections import OrderedDict
-from dosed.models.base import BaseNet
+
+from ..functions import Detection
+from .base import BaseNet
 
 
 class DOSED1(BaseNet):
