@@ -1,47 +1,54 @@
 ## Dreem One Shot Event Detector (DOSED)
 
-This repository contains a functional implementation of DOSED, a deep learning method proposed in:
+This repository contains a functional implementation of DOSED, a deep learning method proposed first in:
 
-"A deep learning architecture to detect events in EEG signals during sleep" by Stanislas Chambon, Valentin Thorey, Pierrick J. Arnal, Emmanuel Mignot, Alexandre Gramfort.
+	Stanislas Chambon, Valentin Thorey, Pierrick J. Arnal, Emmanuel Mignot, Alexandre Gramfort
+	A deep learning architecture to detect events in EEG signals during sleep
+	IEEE 28th International Workshop on Machine Learning for Signal Processing (MLSP), 2018
+	https://arxiv.org/abs/1807.05981
 
-"DOSED: a deep learning approach to detect multiple sleep micro-events in EEG signal" by Stanislas Chambon, Valentin Thorey, Pierrick J. Arnal, Emmanuel Mignot, Alexandre Gramfort.
+and extended in:
+
+	Stanislas Chambon, Valentin Thorey, Pierrick J. Arnal, Emmanuel Mignot, Alexandre Gramfort.
+	DOSED: a deep learning approach to detect multiple sleep micro-events in EEG signal
+	https://arxiv.org/abs/1812.04079
 
 ### Introduction
 
 DOSED in a deep learning approach to jointly predicts locations, durations and types of events in time series.
 It was inspired by computer vision object detectors such as YOLO and SSD and relies on a convolutional neural network that builds a feature representation from raw input signals,
  as well as two modules performing localization and classification respectively. DOSED can be easily adapt to detect events of any sort.
- 
+
  ![dosed_detection_image](https://github.com/Dreem-Organization/dosed/blob/master/dosed_detection.png)
 
 ### Citing DOSED
 
+    @inproceedings{chambon2018deep,
+      title={A deep learning architecture to detect events in EEG signals during sleep},
+      author={Chambon, Stanislas and Thorey, Valentin and Arnal, Pierrick J and Mignot, Emmanuel and Gramfort, Alexandre},
+      booktitle={2018 IEEE 28th International Workshop on Machine Learning for Signal Processing (MLSP)},
+      pages={1--6},
+      year={2018},
+      organization={IEEE}
+    }
 
-        @inproceedings{chambon2018deep,
-          title={A deep learning architecture to detect events in EEG signals during sleep},
-          author={Chambon, Stanislas and Thorey, Valentin and Arnal, Pierrick J and Mignot, Emmanuel and Gramfort, Alexandre},
-          booktitle={2018 IEEE 28th International Workshop on Machine Learning for Signal Processing (MLSP)},
-          pages={1--6},
-          year={2018},
-          organization={IEEE}
-        }
+    @article{chambon2018dosed,
+      title={DOSED: a deep learning approach to detect multiple sleep micro-events in EEG signal},
+      author={Chambon, Stanislas and Thorey, Valentin and Arnal, Pierrick J and Mignot, Emmanuel and Gramfort, Alexandre},
+      journal={arXiv preprint arXiv:1812.04079},
+      year={2018}
+    }
 
-        @article{chambon2018dosed,
-          title={DOSED: a deep learning approach to detect multiple sleep micro-events in EEG signal},
-          author={Chambon, Stanislas and Thorey, Valentin and Arnal, Pierrick J and Mignot, Emmanuel and Gramfort, Alexandre},
-          journal={arXiv preprint arXiv:1812.04079},
-          year={2018}
-        }
- 
-### Minimum example  
+### Minimum example
 
 The folder */minimum_example* contains all necessary code to train a spindle detection model on EEG signals.
 
-We provide a dataset composed of 21 recordings with two EEG central channels downsampled at 64Hz on which spindles have been annotated. The data was collected at Dreem (dreem.com) with a Polysomnography device.
+We provide a dataset composed of 21 recordings with two EEG central channels downsampled at 64Hz on which spindles have been annotated. The data was collected at [Dreem](http://www.dreem.com) with a Polysomnography device.
 
 The example works out-of-the-box given the following considerations.
 
 #### 1. Package requirements
+
 Packages detailed in *requirements.txt* need to be installed for the example to work.
 
 #### 2. Data
@@ -117,7 +124,7 @@ and of variable *events*. e.g.
         },
     ]
 ```
-  
+
 #### 3. Training and testing
 
 The jupyter notebook *train\_and\_evaluate\_dosed.ipynb* goes through the training process in detail, describing all important training parameters. It also explains how to generate predictions, and provides a plot of a spindle detection.
