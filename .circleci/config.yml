@@ -8,6 +8,7 @@ jobs:
       - run:
           command: |  # use pip to install dependencies and then launch tests
             pip install pip --upgrade
+            pip install -R requirements.txt
             pip install Cython
             pip install h5py
             pip install tqdm
