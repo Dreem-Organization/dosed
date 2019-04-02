@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from dosed.functions.simple_loss import DOSEDSimpleLoss
+from .simple_loss import DOSEDSimpleLoss
 
 
 class DOSEDFocalLoss(DOSEDSimpleLoss):

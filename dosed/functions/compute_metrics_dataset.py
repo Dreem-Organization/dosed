@@ -1,5 +1,5 @@
 import numpy as np
-from dosed.functions import precision_function, recall_function, f1_function
+from .metrics import precision_function, recall_function, f1_function
 
 available_score_functions = {
     "precision": precision_function(),

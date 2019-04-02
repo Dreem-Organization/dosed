@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from dosed.functions.simple_loss import DOSEDSimpleLoss
+from .simple_loss import DOSEDSimpleLoss
 
 
 class DOSEDRandomNegativeMiningLoss(DOSEDSimpleLoss):

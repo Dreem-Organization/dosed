@@ -1,7 +1,7 @@
 import torch.nn as nn
-from dosed.functions import Detection
 from collections import OrderedDict
-from dosed.models.base import BaseNet, get_overlerapping_default_events
+from ..functions import Detection
+from .base import BaseNet, get_overlerapping_default_events
 
 
 class DOSED2(BaseNet):
