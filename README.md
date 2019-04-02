@@ -51,13 +51,25 @@ The example works out-of-the-box given the following considerations.
 
 Packages detailed in *requirements.txt* need to be installed for the example to work.
 
+A settings.py file is used at the root of the project to manage data location. We provide a default
+file that should work out of the box and download data in ROOT_PROJECT/data with:
+
+`cp settings-template.py settings.py`
+
+If you wand to store data in another location, change the *settings.py* accordingly.
+
 #### 2. Data
 
-Running the script *download\_and\_format\_data.sh* from the */minimum\_example* directory automatically downloads, pre-processes and saves the EEG data in the correct format for training and testing DOSED.
+Running the script *download\_and\_format\_data.sh* from the */minimum\_example* directory automatically downloads, pre-processes and saves the EEG data in the correct format for training and testing DOSED at
+the location provided in your *settings.py*.
 
 Furthemore, the jupyter notebook *download\_and\_data\_format\_explanation.ipynb* provides detailed explanation about the aforementioned steps and about the data formats used to store the information, together with visualizations of the events under consideration.
 
-In principle, signals and annotations provided in any data format can be processed by adapting the function *to\_h5.py*, which saves the information in individual .h5 files (one per record).
+##### 2.1 To H5
+
+To work with different datasets, and hence data format, we first require you to convert you original
+data and annotation into H5 files for each record. An example is provided with the minimum_example 
+going from EDF data format + json annotations into H5 format.
 
 Required structure for the .h5 files is the following:
 
@@ -76,7 +88,16 @@ Required structure for the .h5 files is the following:
             ... # add as many events as desired
 ```
 
-The *to_memmap.py* script extracts data from the .h5 files, normalizes them and saves them in memmap files. Two variables define this process. The variable *signals* allows to configurate the minimun and maximum clipping boundaries for each signal. Additionally, variable *events* permits to specify the name of the event types under consideration and the ground truth (note that .h5 files can contain several ground truth versions).
+This code is the only dataset-specific code that you will need to write.
+
+##### 2.2 To Memmap
+
+To Train the model, we first convert generic h5 to memmaps files. This allows:
+- Selecting which signals we want to train on
+- Selecting which events we want to train on
+- Allows multi-threading
+
+The *to_memmap.py* script extracts data from the .h5 files, normalizes them and saves them in memmap files. Two variables define this process. The argument *signals* allows to configurate the minimun and maximum clipping boundaries for each signal. Additionally, the argument *events* allows to specify the name of the event types under consideration and the ground truth (note that .h5 files can contain several ground truth versions).
 
 Configuration of variable *signals* . e.g.
 
