@@ -1,10 +1,12 @@
 import json
 import h5py
 import pyedflib
-from settings import MINIMUM_EXAMPLE_SETTINGS
+import tqdm
 import os
 
+from settings import MINIMUM_EXAMPLE_SETTINGS
 
+print("\n Converting EDF and annotations to standard H5 file")
 base_directory = MINIMUM_EXAMPLE_SETTINGS["download_directory"]
 
 records = [
@@ -14,7 +16,7 @@ records = [
 if not os.path.isdir(MINIMUM_EXAMPLE_SETTINGS["h5_directory"]):
     os.mkdir(MINIMUM_EXAMPLE_SETTINGS["h5_directory"])
 
-for record in records:
+for record in tqdm.tqdm(records):
     edf_filename = base_directory + record + ".edf"
     spindle_filename = base_directory + record + "_spindle.json"
     h5_filename = '{}/{}.h5'.format(MINIMUM_EXAMPLE_SETTINGS["h5_directory"], record)
