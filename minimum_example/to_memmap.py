@@ -37,8 +37,10 @@ events = [
     },
 ]
 
+print("\nConverting standard H5 files to memmaps usable for training")
+
 h5_to_memmap(h5_directory=MINIMUM_EXAMPLE_SETTINGS["h5_directory"],
              memmap_directory=MINIMUM_EXAMPLE_SETTINGS["memmap_directory"],
              signals=signals,
              events=events,
-             parallel=True)
+             parallel=False)

@@ -3,6 +3,7 @@
 import os
 import json
 import numpy as np
+import tqdm
 import h5py
 from joblib import Parallel, delayed
 
@@ -19,7 +20,7 @@ def clip(max_value):
 
 
 def clip_and_normalize(min_value, max_value):
-    """returns a function to clip and normalize data"""
+    """returns a fuFnction to clip and normalize data"""
 
     def clipper(x, min_value=min_value, max_value=max_value):
         """returns input signal clipped between min_value and max_value
@@ -57,7 +58,6 @@ def process_record(record,
                    index):
     """processes one record from h5 to memmap"""
 
-    print(record)
     info = {}
 
     with h5py.File(record, "r") as h5:
@@ -149,7 +149,7 @@ def h5_to_memmap(h5_directory,
                 for record in records)
         else:
             events_info = []
-            for record in records:
+            for record in tqdm.tqdm(records):
                 info = process_record(record,
                                       signal,
                                       memmap_directory,
