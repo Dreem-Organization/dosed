@@ -12,8 +12,7 @@ jobs:
             pip install -r requirements.txt
       - run:
           name: Launch Test
-          command:
-            python -m pytest --cov-config .coveragerc --cov=./dosed --cov-fail-under=90 --cov-report=term-missing
+          command: python -m pytest --cov-config .coveragerc --cov=./dosed --cov-fail-under=90 --cov-report=term-missing
 workflows:
   version: 2
   build_and_test:
