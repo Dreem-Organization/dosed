@@ -6,3 +6,5 @@ joblib==0.12.5
 matplotlib==3.0.2
 pyedflib==0.1.14
 torch==1.0.0
+pytest==3.10.0
+pytest-cov==2.6.0
