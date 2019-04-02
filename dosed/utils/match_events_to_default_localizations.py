@@ -1,5 +1,6 @@
 import torch
-from dosed.utils import jaccard_overlap, encode
+from .jaccard_overlap import jaccard_overlap
+from .encode import encode
 
 
 def match_events_localization_to_default_localizations(localizations_default, events, threshold_overlap):

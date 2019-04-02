@@ -5,7 +5,7 @@ import json
 import torch
 import shutil
 import numpy as np
-from dosed.utils import binary_to_array
+from ..utils import binary_to_array
 
 
 class BaseNet(nn.Module):

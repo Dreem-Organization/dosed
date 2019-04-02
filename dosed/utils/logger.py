@@ -10,7 +10,7 @@ import os
 import json
 import time
 import os.path as osp
-from dosed.utils.colorize import colorize
+from .colorize import colorize
 import tempfile
 
 

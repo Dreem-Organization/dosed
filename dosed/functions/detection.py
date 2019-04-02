@@ -1,6 +1,6 @@
 """inspired from https://github.com/amdegroot/ssd.pytorch"""
 import torch.nn as nn
-from dosed.utils import non_maximum_suppression, decode
+from ..utils import non_maximum_suppression, decode
 
 
 class Detection(nn.Module):

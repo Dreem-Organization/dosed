@@ -1,5 +1,5 @@
 import torch
-from dosed.utils import jaccard_overlap
+from ..utils import jaccard_overlap
 
 
 def precision_function():

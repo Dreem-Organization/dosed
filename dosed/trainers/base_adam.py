@@ -1,8 +1,8 @@
 """ Trainer class with Adam optimizer """
 
 from torch import device
-from dosed.trainers.base import TrainerBase
 import torch.optim as optim
+from .base import TrainerBase
 
 
 class TrainerBaseAdam(TrainerBase):

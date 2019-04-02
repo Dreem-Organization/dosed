@@ -6,9 +6,9 @@ import numpy as np
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from dosed.datasets import collate
-from dosed.functions import (loss_functions, available_score_functions, compute_metrics_dataset)
-from dosed.utils import (match_events_localization_to_default_localizations, Logger)
+from ..datasets import collate
+from ..functions import (loss_functions, available_score_functions, compute_metrics_dataset)
+from ..utils import (match_events_localization_to_default_localizations, Logger)
 
 
 class TrainerBase:
