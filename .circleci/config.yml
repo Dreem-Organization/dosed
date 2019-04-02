@@ -9,15 +9,7 @@ jobs:
           command: |  # use pip to install dependencies and then launch tests
             pip install pip --upgrade
             pip install -R requirements.txt
-            pip install Cython
-            pip install h5py
-            pip install tqdm
-            pip install boto3
-            pip install sklearn
-            pip install joblib
-            pip install matplotlib
-            pip install pytest
-            pip install pytest-cov
+
             python -m pytest --cov-config .coveragerc --cov=./dosed --cov-fail-under=90 --cov-report=term-missing
 workflows:
   version: 2
