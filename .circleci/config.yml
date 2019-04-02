@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build_and_test:
+  build:
     docker:
       - image: floydhub/pytorch:1.0.0-gpu.cuda9cudnn7-py3.38
     steps:
@@ -9,10 +9,12 @@ jobs:
           command: |  # use pip to install dependencies and then launch tests
             pip install pip --upgrade
             pip install -r requirements.txt
-
+  test:
+      - run:
             python -m pytest --cov-config .coveragerc --cov=./dosed --cov-fail-under=90 --cov-report=term-missing
 workflows:
   version: 2
   build_and_test:
     jobs:
-      - build_and_test
+      - build
+      - test
