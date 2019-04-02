@@ -56,7 +56,7 @@ file that should work out of the box and download data in ROOT_PROJECT/data with
 
 `cp settings-template.py settings.py`
 
-If you wand to store data in another location, change the *settings.py* accordingly.
+If you want to store data in another location, change the *settings.py* accordingly.
 
 #### 2. Data
 
