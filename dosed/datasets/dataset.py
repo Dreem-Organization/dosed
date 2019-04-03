@@ -50,11 +50,11 @@ class EventDataset(Dataset):
 
         assert type(downsampling) == int
 
-        self.fs = self.data_index["signals"]["fs"] / self.downsampling
+        self.fs = self.data_index["sampling_frequency"] / self.downsampling
         self.window_size = int(self.window * self.fs)
         self.input_size = self.window_size
         self.minimum_overlap = minimum_overlap
-        self.number_of_channels = len(self.data_index["signals"]["h5_paths"])
+        self.number_of_channels = len(self.data_index["signals"])
 
         # Open signals and events
         self.signals = {}
@@ -63,19 +63,21 @@ class EventDataset(Dataset):
         self.index_to_record_event = []  # link index to record
         for record in self.records:
             assert record in self.data_index["records"]
-            self.signals[record] = {}
-            signal_filename = record + "_signals.mm"
-            self.signals[record]["data"] = np.memmap(
-                signal_filename,
-                dtype='float32',
-                mode='r',
-                shape=(self.number_of_channels,
-                       self.data_index["signals"]["size"][signal_filename]))[:, ::downsampling]
 
-            signal_size = self.signals[record]["data"].shape[1]
+            data = np.memmap(
+                record + "_signals.mm",
+                dtype='float32',
+                mode='r'
+            ).reshape((self.number_of_channels, -1))[:, ::downsampling]
+
+            signal_size = data.shape[-1]
             number_of_windows = signal_size // self.window_size
-            self.signals[record]["number_of_windows"] = number_of_windows
-            self.signals[record]["size"] = signal_size
+
+            self.signals[record] = {
+                "data": data,
+                "number_of_windows": number_of_windows,
+                "size": signal_size,
+            }
 
             self.index_to_record.extend([
                 {
@@ -86,19 +88,22 @@ class EventDataset(Dataset):
 
             self.events[record] = {}
             number_of_events = 0
-            for event in self.data_index["events"]:
-                event_filename = record + "_{}.mm".format(event["name"])
-                number_of_events += event["size"][event_filename]
-
-                if os.path.isfile(event_filename):  # some records might not have some events
-                    self.events[record][event["name"]] = {}
-                    self.events[record][event["name"]]["data"] = np.memmap(
-                        event_filename,
+            for label, event in enumerate(self.data_index["events"]):
+                try:
+                    data = np.memmap(
+                        record + "_{}.mm".format(event["name"]),
                         dtype='float32',
-                        mode='r',
-                        shape=(2, event["size"][event_filename])
-                    ) * self.fs
-                    self.events[record][event["name"]]["label"] = event["label"]
+                        mode='r'
+                    ).reshape((2, -1)) * self.fs
+                except FileNotFoundError:
+                    pass
+                else:
+                    number_of_events += data.shape[-1]
+                    self.events[record][event["name"]] = {
+                        "data": data,
+                        "label": label,
+                    }
+
             self.index_to_record_event.extend([
                 {
                     "record": record,

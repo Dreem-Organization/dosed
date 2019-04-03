@@ -7,12 +7,6 @@ from dosed.utils import h5_to_memmap
 
 
 def remove_root(index):
-    index["signals"]["size"] = {
-        k.split("/")[-1]: v for k, v in index["signals"]["size"].items()
-    }
-    index["events"][0]["size"] = {
-        k.split("/")[-1]: v for k, v in index["events"][0]["size"].items()
-    }
     index["records"] = set([x.split("/")[-1] for x in index["records"]])
     return index
 
@@ -20,30 +14,24 @@ def remove_root(index):
 def test_h5_to_memmap():
     signals = [
         {
-            "name": "signals",
-            "h5_paths": [
-                {
-                    'path': '/eeg_0',
-                    'processing': {
-                        "type": "clip_and_normalize",
-                        "args": {
-                            "min_value": -150,
-                            "max_value": 150,
-                        }
-                    }
-                },
-                {
-                    'path': '/eeg_1',
-                    'processing': {
-                        "type": "clip_and_normalize",
-                        "args": {
-                            "min_value": -150,
-                            "max_value": 150,
-                        }
-                    }
+            'h5_path': '/eeg_0',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
                 }
-            ],
-            "fs": 64,
+            }
+        },
+        {
+            'h5_path': '/eeg_1',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
         }
     ]
 

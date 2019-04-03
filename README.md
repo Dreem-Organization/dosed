@@ -75,16 +75,27 @@ Required structure for the .h5 files is the following:
 
 ```javascript
         h5_file/
-            /signal_1
-            /signal_2
-            /signal_3
+
+            /path/to/signal_1
+                     -> attribute "fs" (sampling freqyency)
+
+            /path/to/signal_2
+                     -> attribute "fs" (sampling freqyency)
+
+            /path/to/signal_3
+                     -> attribute "fs" (sampling freqyency)
+
             ... # add as many signals as desired
-            /event_1/
+
+
+            /path/to/event_1/
                 /start  # array_like: start position of events with respect to the beginning of the recording (in seconds).
                 /duration  # array_like: duration events (in seconds).
-            /event_2/
+
+            /path/to/event_2/
                 /start
                 /duration
+
             ... # add as many events as desired
 ```
 

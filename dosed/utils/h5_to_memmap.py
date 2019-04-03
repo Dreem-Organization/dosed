@@ -8,81 +8,89 @@ import tqdm
 import h5py
 from joblib import Parallel, delayed
 
-
-def clip(max_value):
-    """returns a function to clip data"""
-
-    def clipper(signal_data, max_value=max_value):
-        """returns input signal clipped between +/- max_value.
-        """
-        return np.clip(signal_data, -max_value, max_value)
-
-    return clipper
+from ..preprocessings import normalizers
 
 
-def clip_and_normalize(min_value, max_value):
-    """returns a function to clip and normalize data"""
+def h5_to_memmap(h5_directory,
+                 memmap_directory,
+                 signals,
+                 events,
+                 parallel=True,
+                 ):
 
-    def clipper(x, min_value=min_value, max_value=max_value):
-        """returns input signal clipped between min_value and max_value
-        and then normalized between -0.5 and 0.5.
-        """
-        x = np.clip(x, min_value, max_value)
-        x = ((x - min_value) /
-             (max_value - min_value)) - 0.5
-        return x
+    records = [h5_directory + filename for filename in os.listdir(h5_directory)
+               if filename[-3:] == ".h5"]
 
-    return clipper
+    # Will contain useful informations for training dataset class
+    index = {
+        "signals": signals,
+        "events": events,
+        "records": [memmap_directory + record[:-3].split("/")[-1] for record
+                    in records]
+    }
 
+    # Check sampling frequencies
+    sampling_frequencies = set(
+        [h5py.File(record)[signal["h5_path"]].attrs["fs"]
+         for record in records for signal in signals]
+    )
+    assert len(sampling_frequencies) == 1
+    index["sampling_frequency"] = float(sampling_frequencies.pop())
 
-def mask_clip_and_normalize(min_value, max_value, mask_value):
-    """returns a function to clip and normalize data"""
+    # check event names
+    assert len(set([event["name"] for event in events])) == 1
 
-    def clipper(x, min_value=min_value, max_value=max_value,
-                mask_value=mask_value):
-        """returns input signal clipped between min_value and max_value
-        and then normalized between -0.5 and 0.5.
-        """
-        mask = np.ma.masked_equal(x, mask_value)
-        x = np.clip(x, min_value, max_value)
-        x = ((x - min_value) /
-             (max_value - min_value)) - 0.5
-        x[mask.mask] = mask_value
-        return x
+    if parallel is True:
+        Parallel(n_jobs=-1, verbose=101)(
+            delayed(process_record)(record,
+                                    signals,
+                                    events,
+                                    memmap_directory)
+            for record in records)
+    else:
+        for record in tqdm.tqdm(records):
+            process_record(record,
+                           signals,
+                           events,
+                           memmap_directory)
 
-    return clipper
+    json.dump(index, open(memmap_directory + "index.json", "w"), indent=4)
 
 
 def process_record(record,
                    signals,
-                   target_folder_name,
-                   index):
+                   events,
+                   memmap_directory):
     """processes one record from h5 to memmap"""
 
-    info = {}
-
     with h5py.File(record, "r") as h5:
-        filename_base = target_folder_name + record[:-3].split("/")[-1]
-        size = int(h5[signals["h5_paths"][0]["path"]].size)
-        filename = "{}_{}.mm".format(filename_base, signals["name"])
-        info["signal_name"] = filename
-        info["signal_size"] = size
-        signals_mm = np.memmap(filename,
-                               dtype='float32',
-                               mode='w+',
-                               shape=(len(signals["h5_paths"]), size))
-        for i, h5_path in enumerate(signals["h5_paths"]):
-            normalizer = normalizers[h5_path['processing']["type"]](
-                **h5_path['processing']['args'])
-            signals_mm[i, 0:len(h5[h5_path["path"]][:])] = \
-                normalizer(h5[h5_path["path"]][:])
+        filename_base = memmap_directory + record.split("/")[-1].split(".")[0]
 
-        for num_event, event in enumerate(index["events"]):
-            info[event["name"]] = {}
+        # Check that all signals have the same size and sampling frequency
+        signals_size = set([int(h5[signal["h5_path"]].size) for signal in signals])
+        assert len(signals_size) == 1, "Different signal sizes found!"
+        signal_size = signals_size.pop()
+
+        # Create data memmap from signals
+        filename = "{}_signals.mm".format(filename_base)
+        data_mm = np.memmap(filename,
+                            dtype='float32',
+                            mode='w+',
+                            shape=(len(signals), signal_size))
+
+        # Fill the memmaps using the normalized data
+        for i, signal in enumerate(signals):
+            normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
+            data_mm[i, :] = normalizer(h5[signal["h5_path"]][:])
+
+        # For each event create a memmap
+        for index_event, event in enumerate(events):
 
             starts = h5[event["h5_path"]]["start"]
             durations = h5[event["h5_path"]]["duration"]
             number_of_events = len(starts)
+
+            assert len(starts) == len(durations), "Inconsistents event durations and starts"
 
             filename = "{}_{}.mm".format(filename_base,
                                          event["name"])
@@ -96,73 +104,3 @@ def process_record(record,
 
             starts_durations[0, :] = starts
             starts_durations[1, :] = durations
-
-            info[event["name"]]["events_{}".format(num_event)] = \
-                number_of_events
-            info[event["name"]]["name_{}".format(num_event)] = \
-                filename
-
-        return info
-
-
-normalizers = {
-    "clip": clip,
-    "clip_and_normalize": clip_and_normalize,
-    "mask_clip_and_normalize": mask_clip_and_normalize
-}
-
-
-def h5_to_memmap(h5_directory,
-                 memmap_directory,
-                 signals,
-                 events,
-                 parallel=True,
-                 ):
-    if not os.path.isdir(memmap_directory):
-        os.mkdir(memmap_directory)
-
-    records = [h5_directory + filename for filename in os.listdir(h5_directory)
-               if filename[-3:] == ".h5"]
-
-    for num_event, event in enumerate(events):
-        event["label"] = num_event
-
-    for signal_num, signal in enumerate(signals):
-
-        signal["size"] = {}
-        for event in events:
-            event["size"] = {}
-
-        index = {
-            "signals": signal,
-            "events": events,
-            "records": [memmap_directory + record[:-3].split("/")[-1] for record
-                        in
-                        records]
-        }
-
-        if parallel is True:
-            events_info = Parallel(n_jobs=-1, verbose=101)(
-                delayed(process_record)(record,
-                                        signal,
-                                        memmap_directory,
-                                        index)
-                for record in records)
-        else:
-            events_info = []
-            for record in tqdm.tqdm(records):
-                info = process_record(record,
-                                      signal,
-                                      memmap_directory,
-                                      index)
-                events_info.append(info)
-
-        for record_num, _ in enumerate(records):
-            record_info = events_info[record_num]
-            signal["size"][record_info["signal_name"]] = record_info["signal_size"]
-            for num_event, event in enumerate(index["events"]):
-                for consensus, _ in enumerate(event):
-                    event["size"][record_info[event["name"]]["name_{}".format(num_event)]] = \
-                        record_info[event["name"]]["events_{}".format(num_event)]
-
-        json.dump(index, open(memmap_directory + "index.json", "w"), indent=4)

@@ -4,30 +4,24 @@ from settings import MINIMUM_EXAMPLE_SETTINGS
 
 signals = [
     {
-        "name": "signals",
-        "h5_paths": [
-            {
-                'path': '/eeg_0',
-                'processing': {
-                    "type": "clip_and_normalize",
-                    "args": {
-                        "min_value": -150,
-                        "max_value": 150,
-                    }
-                }
-            },
-            {
-                'path': '/eeg_1',
-                'processing': {
-                    "type": "clip_and_normalize",
-                    "args": {
-                        "min_value": -150,
-                        "max_value": 150,
-                    }
-                }
+        'h5_path': '/eeg_0',
+        'processing': {
+            "type": "clip_and_normalize",
+            "args": {
+                    "min_value": -150,
+                "max_value": 150,
             }
-        ],
-        "fs": 64,
+        }
+    },
+    {
+        'h5_path': '/eeg_1',
+        'processing': {
+            "type": "clip_and_normalize",
+            "args": {
+                    "min_value": -150,
+                "max_value": 150,
+            }
+        }
     }
 ]
 
