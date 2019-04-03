@@ -21,7 +21,7 @@ def clip(max_value):
 
 
 def clip_and_normalize(min_value, max_value):
-    """returns a fuFnction to clip and normalize data"""
+    """returns a function to clip and normalize data"""
 
     def clipper(x, min_value=min_value, max_value=max_value):
         """returns input signal clipped between min_value and max_value
