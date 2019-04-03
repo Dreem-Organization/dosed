@@ -1,4 +1,5 @@
 from dosed.utils import h5_to_memmap
+
 from settings import MINIMUM_EXAMPLE_SETTINGS
 
 signals = [

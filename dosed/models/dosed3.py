@@ -1,6 +1,8 @@
 import warnings
-import torch.nn as nn
 from collections import OrderedDict
+
+import torch.nn as nn
+
 from ..functions import Detection
 from .base import BaseNet, get_overlerapping_default_events
 

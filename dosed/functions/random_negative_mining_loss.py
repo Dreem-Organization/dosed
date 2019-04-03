@@ -1,5 +1,7 @@
-import torch
 import numpy as np
+
+import torch
+
 from .simple_loss import DOSEDSimpleLoss
 
 

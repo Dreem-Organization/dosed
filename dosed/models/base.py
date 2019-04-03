@@ -1,10 +1,12 @@
-import torch.nn as nn
 import tarfile
 import tempfile
 import json
-import torch
 import shutil
 import numpy as np
+
+import torch
+import torch.nn as nn
+
 from ..utils import binary_to_array
 
 

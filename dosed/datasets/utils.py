@@ -1,6 +1,7 @@
-import torch
 import random
 import json
+
+import torch
 
 
 def collate(batch):

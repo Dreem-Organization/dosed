@@ -1,5 +1,6 @@
-from dosed.utils import encode, decode
 import torch
+
+from dosed.utils import encode, decode
 
 
 def test_encode_decode():

@@ -1,5 +1,6 @@
-from dosed.datasets import BalancedEventDataset, EventDataset, get_train_validation_test
 import json
+
+from dosed.datasets import BalancedEventDataset, EventDataset, get_train_validation_test
 
 
 def test_dataset():

@@ -1,8 +1,9 @@
 """ This script contains a set of transformations than can be applied to
 input data before feeding it to the model"""
 
-import torch
 import numpy as np
+
+import torch
 
 
 class RegularizerBase:
