@@ -9,10 +9,10 @@ bucket_name = 'dreem-dosed-minimum-example'
 
 client = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 
-files = client.list_objects(Bucket='dreem-dosed-minimum-example')["Contents"]
+bucket_objects = client.list_objects(Bucket='dreem-dosed-minimum-example')["Contents"]
 print("\n Downloading EDF files and annotations from S3")
-for file in tqdm.tqdm(files):
-    filename = file["Key"]
+for bucket_object in tqdm.tqdm(bucket_objects):
+    filename = bucket_object["Key"]
     client.download_file(
         Bucket=bucket_name,
         Key=filename,
