@@ -1,4 +1,5 @@
 import numpy as np
+
 from .metrics import precision_function, recall_function, f1_function
 
 available_score_functions = {

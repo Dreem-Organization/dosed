@@ -4,9 +4,10 @@ import os
 import json
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
+from matplotlib import gridspec
+
 import torch
 from torch.utils.data import Dataset
-from matplotlib import gridspec
 
 
 class EventDataset(Dataset):

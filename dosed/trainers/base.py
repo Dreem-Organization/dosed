@@ -3,9 +3,11 @@
 import copy
 import tqdm
 import numpy as np
+
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
+
 from ..datasets import collate
 from ..functions import (loss_functions, available_score_functions, compute_metrics_dataset)
 from ..utils import (match_events_localization_to_default_localizations, Logger)

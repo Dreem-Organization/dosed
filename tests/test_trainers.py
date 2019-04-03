@@ -1,8 +1,10 @@
+import json
+
+import torch
+
 from dosed.datasets import BalancedEventDataset
 from dosed.models import DOSED3
 from dosed.trainers import trainers
-import json
-import torch
 
 
 def test_balanced_dataset():

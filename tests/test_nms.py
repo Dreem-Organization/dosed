@@ -1,5 +1,6 @@
-from dosed.utils import non_maximum_suppression
 import torch
+
+from dosed.utils import non_maximum_suppression
 
 
 def test_non_maximum_suppression():

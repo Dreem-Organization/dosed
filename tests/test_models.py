@@ -1,5 +1,6 @@
-import torch
 import tempfile
+
+import torch
 
 from dosed.models import DOSED1, DOSED2, DOSED3
 

@@ -1,9 +1,9 @@
-from settings import MINIMUM_EXAMPLE_SETTINGS
 import boto3
 from botocore import UNSIGNED
 from botocore.client import Config
 import tqdm
 
+from settings import MINIMUM_EXAMPLE_SETTINGS
 
 bucket_name = 'dreem-dosed-minimum-example'
 

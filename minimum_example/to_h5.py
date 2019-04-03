@@ -1,8 +1,9 @@
 import json
+import os
+
 import h5py
 import pyedflib
 import tqdm
-import os
 
 from settings import MINIMUM_EXAMPLE_SETTINGS
 
