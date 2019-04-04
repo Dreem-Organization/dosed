@@ -15,6 +15,7 @@ def h5_to_memmap(h5_directory,
                  memmap_directory,
                  signals,
                  events,
+                 downsampling_rate=1,
                  parallel=True,
                  ):
 
@@ -35,24 +36,26 @@ def h5_to_memmap(h5_directory,
          for record in records for signal in signals]
     )
     assert len(sampling_frequencies) == 1
-    index["sampling_frequency"] = float(sampling_frequencies.pop())
+    index["sampling_frequency"] = float(sampling_frequencies.pop()) / downsampling_rate
 
     # check event names
     assert len(set([event["name"] for event in events])) == 1
 
     if parallel is True:
         Parallel(n_jobs=-1, verbose=101)(
-            delayed(process_record)(record,
-                                    signals,
-                                    events,
-                                    memmap_directory)
+            delayed(process_record)(record=record,
+                                    signals=signals,
+                                    events=events,
+                                    memmap_directory=memmap_directory,
+                                    downsampling_rate=downsampling_rate)
             for record in records)
     else:
         for record in tqdm.tqdm(records):
-            process_record(record,
-                           signals,
-                           events,
-                           memmap_directory)
+            process_record(record=record,
+                           signals=signals,
+                           events=events,
+                           memmap_directory=memmap_directory,
+                           downsampling_rate=downsampling_rate)
 
     json.dump(index, open(memmap_directory + "index.json", "w"), indent=4)
 
@@ -60,7 +63,8 @@ def h5_to_memmap(h5_directory,
 def process_record(record,
                    signals,
                    events,
-                   memmap_directory):
+                   memmap_directory,
+                   downsampling_rate):
     """processes one record from h5 to memmap"""
 
     with h5py.File(record, "r") as h5:
@@ -69,7 +73,7 @@ def process_record(record,
         # Check that all signals have the same size and sampling frequency
         signals_size = set([int(h5[signal["h5_path"]].size) for signal in signals])
         assert len(signals_size) == 1, "Different signal sizes found!"
-        signal_size = signals_size.pop()
+        signal_size = len(range(0, signals_size.pop(), downsampling_rate))
 
         # Create data memmap from signals
         filename = "{}_signals.mm".format(filename_base)
@@ -81,7 +85,7 @@ def process_record(record,
         # Fill the memmaps using the normalized data
         for i, signal in enumerate(signals):
             normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
-            data_mm[i, :] = normalizer(h5[signal["h5_path"]][:])
+            data_mm[i, :] = normalizer(h5[signal["h5_path"]][:])[::downsampling_rate]
 
         # For each event create a memmap
         for index_event, event in enumerate(events):

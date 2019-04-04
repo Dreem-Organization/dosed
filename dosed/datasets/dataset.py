@@ -1,6 +1,5 @@
 """Dataset Class for DOSED training"""
 
-import os
 import json
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
@@ -19,7 +18,6 @@ class EventDataset(Dataset):
     ========e
         index_filename
         window: size of window in seconds
-        downsampling: int to downsample data signals
         transform_parameters
         minimum_overlap: minimum jaccard to consoder an event in a window
         percentage_validation: where to switch from trainers to val
@@ -34,7 +32,6 @@ class EventDataset(Dataset):
                  data_index_filename,
                  window,
                  records,
-                 downsampling=1,
                  minimum_overlap=0.5,
                  transformations=None
                  ):
@@ -45,12 +42,9 @@ class EventDataset(Dataset):
 
         # window parameters
         self.window = window
-        self.downsampling = downsampling
         self.records = records
 
-        assert type(downsampling) == int
-
-        self.fs = self.data_index["sampling_frequency"] / self.downsampling
+        self.fs = self.data_index["sampling_frequency"]
         self.window_size = int(self.window * self.fs)
         self.input_size = self.window_size
         self.minimum_overlap = minimum_overlap
@@ -68,7 +62,7 @@ class EventDataset(Dataset):
                 record + "_signals.mm",
                 dtype='float32',
                 mode='r'
-            ).reshape((self.number_of_channels, -1))[:, ::downsampling]
+            ).reshape((self.number_of_channels, -1))
 
             signal_size = data.shape[-1]
             number_of_windows = signal_size // self.window_size
@@ -298,7 +292,6 @@ class BalancedEventDataset(EventDataset):
                  data_index_filename,
                  window,
                  records,
-                 downsampling=1,
                  minimum_overlap=0.5,
                  transformations=None,
                  ratio_positive=0.5
@@ -306,7 +299,6 @@ class BalancedEventDataset(EventDataset):
         super(BalancedEventDataset, self).__init__(
             data_index_filename=data_index_filename,
             window=window,
-            downsampling=downsampling,
             minimum_overlap=minimum_overlap,
             records=records,
             transformations=transformations,
