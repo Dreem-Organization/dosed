@@ -112,38 +112,29 @@ The *to_memmap.py* script extracts data from the .h5 files, normalizes them and 
 
 Configuration of variable *signals* . e.g.
 
-```javascript
-    signals = {
-        [
-            "name": "signals",  # memmap save name
-                "h5_paths": [
-                    {
-                        'path': '/h5_path_to_signal_1',
-                        'processing': {
-                            "type": "clip_and_normalize",
-                            "args": {
-                                "min_value": -100,
-                                "max_value": 100,
-                            }
-                        }
-                    },
-                    {
-                        'path': '/h5_path_to_signal_2',
-                        'processing': {
-                            "type": "clip_and_normalize",
-                            "args": {
-                                "min_value": -100,
-                                "max_value": 100,
-                            }
-                        }
-                    },
-                    ...  # add as many signals as desired
-                ],
-
-            "fs": 256., # (in Hz) all signals in the set have to be sampled at the same frequency
-        ],
-        ... # add as many sets of signals as desired
-    }
+```python
+    signals = [
+        {
+            'h5_path': '/path/to/signal_1',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        },
+        {
+            'h5_path': '/path/to/signal_2',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        }
+    ]
 ```
 
 and of variable *events*. e.g.
@@ -151,8 +142,8 @@ and of variable *events*. e.g.
 ```javascript
     events = [
         {
-            "name": "my_events",  # name of the events
-                    "h5_path": "/event_1",  # annotations path in the .h5 file
+            "name": "event_1",  # name of the events
+            "h5_path": "/path/to/event_1/",  # annotations path in the .h5 file
         },
     ]
 ```
