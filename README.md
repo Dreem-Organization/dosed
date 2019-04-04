@@ -113,39 +113,39 @@ The *to_memmap.py* script extracts data from the .h5 files, normalizes them and 
 Configuration of variable *signals* . e.g.
 
 ```python
-    signals = [
-        {
-            'h5_path': '/path/to/signal_1',
-            'processing': {
-                "type": "clip_and_normalize",
-                "args": {
-                        "min_value": -150,
-                    "max_value": 150,
-                }
-            }
-        },
-        {
-            'h5_path': '/path/to/signal_2',
-            'processing': {
-                "type": "clip_and_normalize",
-                "args": {
-                        "min_value": -150,
-                    "max_value": 150,
-                }
+signals = [
+    {
+        'h5_path': '/path/to/signal_1',
+        'processing': {
+            "type": "clip_and_normalize",
+            "args": {
+                    "min_value": -150,
+                "max_value": 150,
             }
         }
-    ]
+    },
+    {
+        'h5_path': '/path/to/signal_2',
+        'processing': {
+            "type": "clip_and_normalize",
+            "args": {
+                    "min_value": -150,
+                "max_value": 150,
+            }
+        }
+    }
+]
 ```
 
 and of variable *events*. e.g.
 
 ```javascript
-    events = [
-        {
-            "name": "event_1",  # name of the events
-            "h5_path": "/path/to/event_1/",  # annotations path in the .h5 file
-        },
-    ]
+events = [
+    {
+        "name": "event_1",  # name of the events
+        "h5_path": "/path/to/event_1/",  # annotations path in the .h5 file
+    },
+]
 ```
 
 #### 3. Training and testing
