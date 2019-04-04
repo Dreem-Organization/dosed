@@ -73,7 +73,7 @@ going from EDF data format + json annotations into H5 format.
 
 Required structure for the .h5 files is the following:
 
-```javascript
+```
 /  # root of the h5 file
 -> /path/to/signal_1
    + attribute "fs" # sampling frequency
