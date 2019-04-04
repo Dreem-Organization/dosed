@@ -75,6 +75,7 @@ Required structure for the .h5 files is the following:
 
 ```
 /  # root of the h5 file
+
 -> /path/to/signal_1
    + attribute "fs" # sampling frequency
 
