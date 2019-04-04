@@ -115,8 +115,8 @@ Configuration of variable *signals* . e.g.
 ```python
 signals = [
     {
-        'h5_path': '/path/to/signal_1',
-        'processing': {
+        'h5_path': '/path/to/signal_1',  # signal path in the h5
+        'processing': {  # processing to apply
             "type": "clip_and_normalize",
             "args": {
                     "min_value": -150,
@@ -142,8 +142,8 @@ and of variable *events*. e.g.
 ```javascript
 events = [
     {
-        "name": "event_1",  # name of the events
-        "h5_path": "/path/to/event_1/",  # annotations path in the .h5 file
+        "name": "event_1",  # name of the event
+        "h5_path": "/path/to/event_1/",  # event path in the h5
     },
 ]
 ```
