@@ -74,29 +74,28 @@ going from EDF data format + json annotations into H5 format.
 Required structure for the .h5 files is the following:
 
 ```javascript
-        h5_file/
+/
+-> /path/to/signal_1
+   + attribute "fs" (sampling frequency)
 
-            /path/to/signal_1
-                     -> attribute "fs" (sampling freqyency)
+-> /path/to/signal_2
+   + attribute "fs" (sampling frequency)
 
-            /path/to/signal_2
-                     -> attribute "fs" (sampling freqyency)
+-> /path/to/signal_3
+   + attribute "fs" (sampling frequency)
 
-            /path/to/signal_3
-                     -> attribute "fs" (sampling freqyency)
-
-            ... # add as many signals as desired
+    ... # add as many signals as desired
 
 
-            /path/to/event_1/
-                /start  # array_like: start position of events with respect to the beginning of the recording (in seconds).
-                /duration  # array_like: duration events (in seconds).
+-> /path/to/event_1/
+   -> /start  # array containing start position of each event with respect to the beginning of the recording (in seconds).
+   -> /duration  # array containing duration  of each event (in seconds).
 
-            /path/to/event_2/
-                /start
-                /duration
+-> /path/to/event_2/
+   -> /start
+   -> /duration
 
-            ... # add as many events as desired
+... # add as many events as desired
 ```
 
 This code is the only dataset-specific code that you will need to write.
