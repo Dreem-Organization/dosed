@@ -17,8 +17,7 @@ class DOSED3(BaseNet):
                  k_max=6,
                  kernel_size=5,
                  pdrop=0.1,
-                 fs=256,
-                 downsampling=1):
+                 fs=256):
 
         super(DOSED3, self).__init__()
         self.sizes = {}
@@ -76,7 +75,7 @@ class DOSED3(BaseNet):
             padding=0,
         )
 
-        self.print_info_architecture(fs / downsampling)
+        self.print_info_architecture(fs)
 
     def forward(self, x):
         batch = x.size(0)

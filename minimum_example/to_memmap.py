@@ -38,4 +38,5 @@ h5_to_memmap(h5_directory=MINIMUM_EXAMPLE_SETTINGS["h5_directory"],
              memmap_directory=MINIMUM_EXAMPLE_SETTINGS["memmap_directory"],
              signals=signals,
              events=events,
-             parallel=False)
+             parallel=False,
+             downsampling_rate=2)
