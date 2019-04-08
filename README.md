@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/Dreem-Organization/dosed.svg?style=svg&circle-token=7b6f5fd8d3db49d25417b269c601296b7eebd64f)](https://circleci.com/gh/Dreem-Organization/dosed)
+
 ## Dreem One Shot Event Detector (DOSED)
 
 This repository contains a functional implementation of DOSED, a deep learning method proposed first in:
