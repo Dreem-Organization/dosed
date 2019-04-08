@@ -4,7 +4,6 @@ import os
 import json
 import numpy as np
 
-import tqdm
 import h5py
 from joblib import Parallel, delayed
 
@@ -16,7 +15,8 @@ def h5_to_memmap(h5_directory,
                  signals,
                  events,
                  downsampling_rate=1,
-                 parallel=True,
+                 n_jobs=-1,
+                 verbose=10,
                  ):
 
     records = [h5_directory + filename for filename in os.listdir(h5_directory)
@@ -41,21 +41,13 @@ def h5_to_memmap(h5_directory,
     # check event names
     assert len(set([event["name"] for event in events])) == 1
 
-    if parallel is True:
-        Parallel(n_jobs=-1, verbose=101)(
-            delayed(process_record)(record=record,
-                                    signals=signals,
-                                    events=events,
-                                    memmap_directory=memmap_directory,
-                                    downsampling_rate=downsampling_rate)
-            for record in records)
-    else:
-        for record in tqdm.tqdm(records):
-            process_record(record=record,
-                           signals=signals,
-                           events=events,
-                           memmap_directory=memmap_directory,
-                           downsampling_rate=downsampling_rate)
+    Parallel(n_jobs=n_jobs, verbose=verbose)(
+        delayed(process_record)(record=record,
+                                signals=signals,
+                                events=events,
+                                memmap_directory=memmap_directory,
+                                downsampling_rate=downsampling_rate)
+        for record in records)
 
     json.dump(index, open(memmap_directory + "index.json", "w"), indent=4)
 

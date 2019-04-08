@@ -48,7 +48,7 @@ def test_h5_to_memmap():
                  memmap_directory=memmap_directory,
                  signals=signals,
                  events=events,
-                 parallel=False)
+                 n_jobs=1)
     assert len(os.listdir(memmap_directory)) == 5
     created_index = remove_root(json.load(open(memmap_directory + "/index.json")))
     test_index = remove_root(json.load(open("./tests/test_files/memmap/index.json")))
@@ -94,8 +94,9 @@ def test_h5_to_memmap_downsamples():
                  memmap_directory=memmap_directory,
                  signals=signals,
                  events=events,
-                 parallel=False,
-                 downsampling_rate=downsampling_rate)
+                 downsampling_rate=downsampling_rate,
+                 n_jobs=1
+                 )
 
     test_index = json.load(open("./tests/test_files/memmap/index.json"))
     created_index = json.load(open(memmap_directory + "/index.json"))
