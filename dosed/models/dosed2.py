@@ -10,16 +10,14 @@ class DOSED2(BaseNet):
 
     def __init__(
         self,
-        input_size,
+        input_shape,
         number_of_classes,
         detection_parameters,
         default_event_sizes,
         k_max=8,
     ):
         super(DOSED2, self).__init__()
-        self.sizes = {}
-        self.input_size, self.input_channel_size = input_size
-        self.sizes[0] = self.input_size
+        self.number_of_channels, self.window_size = input_shape
         self.number_of_classes = number_of_classes + 1  # eventness, real events
 
         detection_parameters["number_of_classes"] = self.number_of_classes
@@ -29,17 +27,17 @@ class DOSED2(BaseNet):
 
         # Localizations to default tensor
         self.localizations_default = get_overlerapping_default_events(
-            window_size=self.input_size,
+            window_size=self.window_size,
             default_event_sizes=default_event_sizes
         )
 
         # model
         self.spatial_filtering = None
-        if self.input_channel_size > 1:
+        if self.number_of_channels > 1:
             self.spatial_filtering = nn.Conv2d(
                 in_channels=1,
-                out_channels=self.input_channel_size,
-                kernel_size=(self.input_channel_size, 1),
+                out_channels=self.number_of_channels,
+                kernel_size=(self.number_of_channels, 1),
                 padding=0)
 
         self.blocks = nn.ModuleList(
@@ -62,20 +60,20 @@ class DOSED2(BaseNet):
         self.localizations = nn.Conv2d(
             in_channels=4 * (2 ** self.k_max),
             out_channels=2 * len(self.localizations_default),
-            kernel_size=(self.input_channel_size, int(self.input_size / (2 ** (self.k_max)))),
+            kernel_size=(self.number_of_channels, int(self.window_size / (2 ** (self.k_max)))),
             padding=(0, 0),
         )
 
         self.classifications = nn.Conv2d(
             in_channels=4 * (2 ** self.k_max),
             out_channels=self.number_of_classes * len(self.localizations_default),
-            kernel_size=(self.input_channel_size, int(self.input_size / (2 ** (self.k_max)))),
+            kernel_size=(self.number_of_channels, int(self.window_size / (2 ** (self.k_max)))),
             padding=(0, 0),
         )
 
     def forward(self, x):
         batch = x.size(0)
-        x = x.view(batch, 1, self.input_channel_size, -1)
+        x = x.view(batch, 1, self.number_of_channels, -1)
 
         if self.spatial_filtering:
             x = self.spatial_filtering(x)

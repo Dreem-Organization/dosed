@@ -10,7 +10,7 @@ from .base import BaseNet, get_overlerapping_default_events
 class DOSED3(BaseNet):
 
     def __init__(self,
-                 input_size,
+                 input_shape,
                  number_of_classes,
                  detection_parameters,
                  default_event_sizes,
@@ -20,9 +20,7 @@ class DOSED3(BaseNet):
                  fs=256):
 
         super(DOSED3, self).__init__()
-        self.sizes = {}
-        self.input_size, self.input_channel_size = input_size
-        self.sizes[0] = self.input_size
+        self.number_of_channels, self.window_size = input_shape
         self.number_of_classes = number_of_classes + 1  # eventless, real events
 
         detection_parameters["number_of_classes"] = self.number_of_classes
@@ -32,13 +30,13 @@ class DOSED3(BaseNet):
         self.kernel_size = kernel_size
         self.pdrop = pdrop
 
-        if max(default_event_sizes) > self.input_size:
+        if max(default_event_sizes) > self.window_size:
             warnings.warn("Detected default_event_sizes larger than"
-                          " input_size! Consider reducing them")
+                          " input_shape! Consider reducing them")
 
         # Localizations to default tensor
         self.localizations_default = get_overlerapping_default_events(
-            window_size=self.input_size,
+            window_size=self.window_size,
             default_event_sizes=default_event_sizes
         )
 
@@ -48,7 +46,7 @@ class DOSED3(BaseNet):
                 nn.Sequential(
                     OrderedDict([
                         ("conv_{}".format(k - 1), nn.Conv1d(
-                            in_channels=4 * (2 ** (k - 1)) if k > 1 else self.input_channel_size,
+                            in_channels=4 * (2 ** (k - 1)) if k > 1 else self.number_of_channels,
                             out_channels=4 * (2 ** k),
                             kernel_size=self.kernel_size,
                             padding=2
@@ -64,14 +62,14 @@ class DOSED3(BaseNet):
         self.localizations = nn.Conv1d(
             in_channels=4 * (2 ** (self.k_max)),
             out_channels=2 * len(self.localizations_default),
-            kernel_size=int(self.input_size / (2 ** (self.k_max))),
+            kernel_size=int(self.window_size / (2 ** (self.k_max))),
             padding=0,
         )
 
         self.classifications = nn.Conv1d(
             in_channels=4 * (2 ** (self.k_max)),
             out_channels=self.number_of_classes * len(self.localizations_default),
-            kernel_size=int(self.input_size / (2 ** (self.k_max))),
+            kernel_size=int(self.window_size / (2 ** (self.k_max))),
             padding=0,
         )
 
@@ -88,7 +86,7 @@ class DOSED3(BaseNet):
 
     def print_info_architecture(self, fs):
 
-        size = self.input_size
+        size = self.window_size
         receptive_field = 0
         print("\nInput feature map size: {}".format(size))
         print("Input receptive field: {}".format(receptive_field))

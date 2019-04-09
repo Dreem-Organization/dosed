@@ -20,7 +20,7 @@ def test_dosed1():
     overlap_default_event = 2
 
     net = DOSED1(
-        input_size=(window_duration * fs, number_of_channels),
+        input_shape=(number_of_channels, window_duration * fs),
         number_of_classes=number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
@@ -50,7 +50,7 @@ def test_dosed2():
     default_event_sizes = [1 * fs, 2 * fs]
 
     net = DOSED2(
-        input_size=(window_duration * fs, number_of_channels),
+        input_shape=(number_of_channels, window_duration * fs),
         number_of_classes=number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
@@ -82,7 +82,7 @@ def test_dosed3():
     default_event_sizes = [1 * fs, 2 * fs]
 
     net = DOSED3(
-        input_size=(window_duration * fs, number_of_channels),
+        input_shape=(number_of_channels, window_duration * fs),
         number_of_classes=number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
@@ -108,7 +108,7 @@ def test_save_load():
     x = torch.rand(batch_size, number_of_channels, window_duration * fs)
 
     net_parameters = {
-        "input_size": [window_duration * fs, number_of_channels],
+        "input_shape": [number_of_channels, window_duration * fs],
         "number_of_classes": 3,
         "detection_parameters": {
             "overlap_non_maximum_suppression": 0.5,
@@ -138,7 +138,7 @@ def test_save_load():
 
 def test_nelement():
     net_parameters = {
-        "input_size": [20, 1],
+        "input_shape": [1, 20],
         "number_of_classes": 3,
         "detection_parameters": {
             "overlap_non_maximum_suppression": 0.5,

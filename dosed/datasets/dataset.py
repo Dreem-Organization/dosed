@@ -54,25 +54,25 @@ class EventDataset(Dataset):
                 assert record in os.listdir(h5_directory)
             self.records = records
         else:
-            self.records = os.listdir(h5_directory)
+            self.records = [x for x in os.listdir(h5_directory) if x[0] != "."]
 
         ###########################
         #  Checks on H5
         # Check sampling frequencies
-        sampling_frequencies = set(
+        fs = set(
             [h5py.File("{}/{}".format(h5_directory, record))[signal["h5_path"]].attrs["fs"]
              for record in self.records for signal in signals]
         )
-        assert len(sampling_frequencies) == 1
-        self.fs = float(sampling_frequencies.pop()) / downsampling_rate
+        assert len(fs) == 1
+        self.fs = fs.pop() / downsampling_rate
 
         # check event names
         assert len(set([event["name"] for event in events])) == len(events)
 
         self.window_size = int(self.window * self.fs)
-        self.input_size = self.window_size  # used in network architecture
-        self.minimum_overlap = minimum_overlap  # for events on the edge of window_size
         self.number_of_channels = len(signals)
+        self.input_shape = (self.number_of_channels, self.window_size)  # used in network architecture
+        self.minimum_overlap = minimum_overlap  # for events on the edge of window_size
 
         # Open signals and events
         self.signals = {}

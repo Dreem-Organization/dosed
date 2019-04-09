@@ -57,7 +57,7 @@ def test_full_training():
     default_event_sizes = [1 * dataset.fs, 2 * dataset.fs]
 
     net = DOSED3(
-        input_size=(dataset.input_size, 2),
+        input_shape=dataset.input_shape,
         number_of_classes=dataset.number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
