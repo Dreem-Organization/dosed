@@ -71,7 +71,7 @@ class EventDataset(Dataset):
         assert len(set([event["name"] for event in events])) == len(events)
 
         # ### joblib cache
-        memory = Memory(h5_directory + "/.cache/", mmap_mode="r")
+        memory = Memory(h5_directory + "/.cache/", mmap_mode="r", verbose=0)
         get_h5_data_cached = memory.cache(get_h5_data)
         get_h5_events_cached = memory.cache(get_h5_events)
 
