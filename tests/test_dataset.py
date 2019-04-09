@@ -22,6 +22,8 @@ def test_dataset():
 
     assert len(dataset) == 720
 
+    assert signal[0][6].tolist() == -0.11056432873010635
+
 
 def test_balanced_dataset():
     data_index_filename = "./tests/test_files/memmap/index.json"
@@ -62,3 +64,4 @@ def test_balanced_dataset():
     signal, events = dataset[0]
 
     assert len(events) == 0
+    assert len(dataset) == 103
