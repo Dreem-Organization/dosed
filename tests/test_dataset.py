@@ -1,18 +1,50 @@
-import json
-
 from dosed.datasets import BalancedEventDataset, EventDataset, get_train_validation_test
 
 
 def test_dataset():
-    data_index_filename = "./tests/test_files/memmap/index.json"
-    train, validation, test = get_train_validation_test(data_index_filename, 50, 50)
+    h5_directory = "./tests/test_files/h5/"
+    train, validation, test = get_train_validation_test(h5_directory, 50, 50)
 
     window = 1  # in seconds
 
+    signals = [
+        {
+            'h5_path': '/eeg_0',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        },
+        {
+            'h5_path': '/eeg_1',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        }
+    ]
+
+    events = [
+        {
+            "name": "spindle",
+            "h5_path": "spindle",
+        },
+    ]
+
     dataset = EventDataset(
-        data_index_filename=data_index_filename,
-        records=train + validation + test,
+        h5_directory=h5_directory,
+        signals=signals,
+        events=events,
         window=window,
+        downsampling_rate=1,
+        records=train,
+        minimum_overlap=0.5,
         transformations=lambda x: x
     )
 
@@ -26,17 +58,53 @@ def test_dataset():
 
 
 def test_balanced_dataset():
-    data_index_filename = "./tests/test_files/memmap/index.json"
-    index = json.load(open(data_index_filename))
-    records = index["records"]
+    h5_directory = "./tests/test_files/h5/"
+    train, validation, test = get_train_validation_test(h5_directory, 50, 50)
+
+    records = train + test + validation
+
     window = 1  # in seconds
 
+    signals = [
+        {
+            'h5_path': '/eeg_0',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        },
+        {
+            'h5_path': '/eeg_1',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        }
+    ]
+
+    events = [
+        {
+            "name": "spindle",
+            "h5_path": "spindle",
+        },
+    ]
+
     dataset = BalancedEventDataset(
-        data_index_filename=data_index_filename,
-        records=records,
+        h5_directory=h5_directory,
+        signals=signals,
+        events=events,
         window=window,
+        downsampling_rate=1,
+        records=None,
+        minimum_overlap=0.5,
+        transformations=lambda x: x,
         ratio_positive=1,
-        transformations=lambda x: x
     )
 
     signal, events = dataset[0]
@@ -53,12 +121,46 @@ def test_balanced_dataset():
 
     assert len(dataset) == 103
 
+    signals = [
+        {
+            'h5_path': '/eeg_0',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        },
+        {
+            'h5_path': '/eeg_1',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        }
+    ]
+
+    events = [
+        {
+            "name": "spindle",
+            "h5_path": "spindle",
+        },
+    ]
+
     dataset = BalancedEventDataset(
-        data_index_filename=data_index_filename,
-        records=records,
+        h5_directory=h5_directory,
+        signals=signals,
+        events=events,
         window=window,
+        downsampling_rate=1,
+        records=None,
+        minimum_overlap=0.5,
+        transformations=lambda x: x,
         ratio_positive=0,
-        transformations=lambda x: x
     )
 
     signal, events = dataset[0]

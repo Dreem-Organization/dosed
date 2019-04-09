@@ -1,12 +1,15 @@
 """Dataset Class for DOSED training"""
 
-import json
+import os
+import h5py
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from matplotlib import gridspec
 
 import torch
 from torch.utils.data import Dataset
+
+from ..utils import get_h5_data, get_h5_events
 
 
 class EventDataset(Dataset):
@@ -29,26 +32,46 @@ class EventDataset(Dataset):
     """
 
     def __init__(self,
-                 data_index_filename,
+                 h5_directory,
+                 signals,
+                 events,
                  window,
-                 records,
+                 downsampling_rate=1,
+                 records=None,
                  minimum_overlap=0.5,
                  transformations=None
                  ):
 
-        self.data_index = json.load(open(data_index_filename))
-        self.number_of_classes = len(self.data_index["events"])
+        self.number_of_classes = len(events)
         self.transformations = transformations
 
         # window parameters
         self.window = window
-        self.records = records
 
-        self.fs = self.data_index["sampling_frequency"]
+        # records (all of them by default)
+        if records is not None:
+            for record in records:
+                assert record in os.listdir(h5_directory)
+        else:
+            records = os.listdir(h5_directory)
+
+        ###########################
+        #  Checks on H5
+        # Check sampling frequencies
+        sampling_frequencies = set(
+            [h5py.File("{}/{}".format(h5_directory, record))[signal["h5_path"]].attrs["fs"]
+             for record in records for signal in signals]
+        )
+        assert len(sampling_frequencies) == 1
+        self.fs = float(sampling_frequencies.pop()) / downsampling_rate
+
+        # check event names
+        assert len(set([event["name"] for event in events])) == len(events)
+
         self.window_size = int(self.window * self.fs)
-        self.input_size = self.window_size
-        self.minimum_overlap = minimum_overlap
-        self.number_of_channels = len(self.data_index["signals"])
+        self.input_size = self.window_size  # used in network architecture
+        self.minimum_overlap = minimum_overlap  # for events on the edge of window_size
+        self.number_of_channels = len(signals)
 
         # Open signals and events
         self.signals = {}
@@ -56,14 +79,12 @@ class EventDataset(Dataset):
         self.index_to_record = []
         self.index_to_record_event = []  # link index to record
         for record in self.records:
-            assert record in self.data_index["records"]
-
-            data = np.memmap(
-                record + "_signals.mm",
-                dtype='float32',
-                mode='r'
-            ).reshape((self.number_of_channels, -1))
-
+            filename = "{}/{}".format(h5_directory, record)
+            data = get_h5_data(
+                filename=filename,
+                signals=signals,
+                downsampling_rate=downsampling_rate,
+            )
             signal_size = data.shape[-1]
             number_of_windows = signal_size // self.window_size
 
@@ -82,21 +103,17 @@ class EventDataset(Dataset):
 
             self.events[record] = {}
             number_of_events = 0
-            for label, event in enumerate(self.data_index["events"]):
-                try:
-                    data = np.memmap(
-                        record + "_{}.mm".format(event["name"]),
-                        dtype='float32',
-                        mode='r'
-                    ).reshape((2, -1)) * self.fs
-                except FileNotFoundError:
-                    pass
-                else:
-                    number_of_events += data.shape[-1]
-                    self.events[record][event["name"]] = {
-                        "data": data,
-                        "label": label,
-                    }
+            for label, event in enumerate(events):
+                data = get_h5_events(
+                    filename=filename,
+                    event=event
+                )
+
+                number_of_events += data.shape[-1]
+                self.events[record][event["name"]] = {
+                    "data": data,
+                    "label": label,
+                }
 
             self.index_to_record_event.extend([
                 {
@@ -289,17 +306,22 @@ class BalancedEventDataset(EventDataset):
     negative events"""
 
     def __init__(self,
-                 data_index_filename,
+                 h5_directory,
+                 signals,
+                 events,
                  window,
-                 records,
+                 downsampling_rate=1,
+                 records=None,
                  minimum_overlap=0.5,
                  transformations=None,
                  ratio_positive=0.5
                  ):
         super(BalancedEventDataset, self).__init__(
-            data_index_filename=data_index_filename,
+            h5_directory=h5_directory,
+            signals=signals,
+            events=events,
             window=window,
-            minimum_overlap=minimum_overlap,
+            downsampling_rate=downsampling_rate,
             records=records,
             transformations=transformations,
         )

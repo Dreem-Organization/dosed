@@ -1,5 +1,5 @@
 import random
-import json
+import os
 
 import torch
 
@@ -14,14 +14,13 @@ def collate(batch):
     return torch.stack(batch_eegs, 0), batch_events
 
 
-def get_train_validation_test(data_index_filename,
+def get_train_validation_test(h5_directory,
                               percent_test,
                               percent_validation,
                               seed_test=2018,
                               seed_validation=0):
-    data_index = json.load(open(data_index_filename, "r"))
 
-    records = data_index["records"]
+    records = os.listdir(h5_directory)
 
     random.seed(seed_test)
     index_test = int(len(records) * percent_test / 100)
