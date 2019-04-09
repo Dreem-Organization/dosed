@@ -8,6 +8,8 @@ from ..preprocessings import normalizers
 
 
 def get_h5_data(filename, signals, downsampling_rate):
+    import time
+    time.sleep(5)
     with h5py.File(filename, "r") as h5:
         # Check that all signals have the same size and sampling frequency
         signals_size = set([int(h5[signal["h5_path"]].size) for signal in signals])

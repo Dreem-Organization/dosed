@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from matplotlib import gridspec
+from joblib import Memory
 
 import torch
 from torch.utils.data import Dataset
@@ -54,7 +55,7 @@ class EventDataset(Dataset):
                 assert record in os.listdir(h5_directory)
             self.records = records
         else:
-            self.records = [x for x in os.listdir(h5_directory) if x[0] != "."]
+            self.records = [x for x in os.listdir(h5_directory) if x != ".cache"]
 
         ###########################
         #  Checks on H5
@@ -69,9 +70,15 @@ class EventDataset(Dataset):
         # check event names
         assert len(set([event["name"] for event in events])) == len(events)
 
+        # ### joblib cache
+        memory = Memory(h5_directory + "/.cache/", mmap_mode="r")
+        get_h5_data_cached = memory.cache(get_h5_data)
+        get_h5_events_cached = memory.cache(get_h5_events)
+
         self.window_size = int(self.window * self.fs)
         self.number_of_channels = len(signals)
-        self.input_shape = (self.number_of_channels, self.window_size)  # used in network architecture
+        # used in network architecture
+        self.input_shape = (self.number_of_channels, self.window_size)
         self.minimum_overlap = minimum_overlap  # for events on the edge of window_size
 
         # Open signals and events
@@ -81,7 +88,7 @@ class EventDataset(Dataset):
         self.index_to_record_event = []  # link index to record
         for record in self.records:
             filename = "{}/{}".format(h5_directory, record)
-            data = get_h5_data(
+            data = get_h5_data_cached(
                 filename=filename,
                 signals=signals,
                 downsampling_rate=downsampling_rate,
@@ -105,7 +112,7 @@ class EventDataset(Dataset):
             self.events[record] = {}
             number_of_events = 0
             for label, event in enumerate(events):
-                data = get_h5_events(
+                data = get_h5_events_cached(
                     filename=filename,
                     event=event,
                     fs=self.fs,

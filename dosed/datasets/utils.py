@@ -20,7 +20,7 @@ def get_train_validation_test(h5_directory,
                               seed_test=2018,
                               seed_validation=0):
 
-    records = os.listdir(h5_directory)
+    records = [x for x in os.listdir(h5_directory) if x != ".cache"]
 
     random.seed(seed_test)
     index_test = int(len(records) * percent_test / 100)

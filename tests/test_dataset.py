@@ -167,3 +167,52 @@ def test_balanced_dataset():
 
     assert len(events) == 0
     assert len(dataset) == 103
+
+
+h5_directory = "./tests/test_files/h5/"
+train, validation, test = get_train_validation_test(h5_directory, 50, 50)
+
+window = 1  # in seconds
+
+signals = [
+    {
+        'h5_path': '/eeg_0',
+        'processing': {
+            "type": "clip_and_normalize",
+            "args": {
+                    "min_value": -150,
+                "max_value": 150,
+            }
+        }
+    },
+    {
+        'h5_path': '/eeg_1',
+        'processing': {
+            "type": "clip_and_normalize",
+            "args": {
+                    "min_value": -150,
+                "max_value": 150,
+            }
+        }
+    }
+]
+
+events = [
+    {
+        "name": "spindle",
+        "h5_path": "spindle",
+    },
+]
+
+dataset = EventDataset(
+    h5_directory=h5_directory,
+    signals=signals,
+    events=events,
+    window=window,
+    downsampling_rate=1,
+    records=train + validation + test,
+    minimum_overlap=0.5,
+    transformations=lambda x: x
+)
+
+signal, events = dataset[0]
