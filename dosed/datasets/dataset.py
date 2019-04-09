@@ -52,15 +52,16 @@ class EventDataset(Dataset):
         if records is not None:
             for record in records:
                 assert record in os.listdir(h5_directory)
+            self.records = records
         else:
-            records = os.listdir(h5_directory)
+            self.records = os.listdir(h5_directory)
 
         ###########################
         #  Checks on H5
         # Check sampling frequencies
         sampling_frequencies = set(
             [h5py.File("{}/{}".format(h5_directory, record))[signal["h5_path"]].attrs["fs"]
-             for record in records for signal in signals]
+             for record in self.records for signal in signals]
         )
         assert len(sampling_frequencies) == 1
         self.fs = float(sampling_frequencies.pop()) / downsampling_rate
@@ -106,7 +107,8 @@ class EventDataset(Dataset):
             for label, event in enumerate(events):
                 data = get_h5_events(
                     filename=filename,
-                    event=event
+                    event=event,
+                    fs=self.fs,
                 )
 
                 number_of_events += data.shape[-1]

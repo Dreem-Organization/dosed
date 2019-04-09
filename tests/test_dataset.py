@@ -43,7 +43,7 @@ def test_dataset():
         events=events,
         window=window,
         downsampling_rate=1,
-        records=train,
+        records=train + validation + test,
         minimum_overlap=0.5,
         transformations=lambda x: x
     )

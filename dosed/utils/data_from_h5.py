@@ -22,13 +22,13 @@ def get_h5_data(filename, signals, downsampling_rate):
     return data
 
 
-def get_h5_events(filename, event):
+def get_h5_events(filename, event, fs):
     with h5py.File(filename, "r") as h5:
-        starts = h5[event["h5_path"]]["start"]
-        durations = h5[event["h5_path"]]["duration"]
+        starts = h5[event["h5_path"]]["start"][:]
+        durations = h5[event["h5_path"]]["duration"][:]
         assert len(starts) == len(durations), "Inconsistents event durations and starts"
 
         data = np.zeros((2, len(starts)))
-        data[0, :] = starts
-        data[1, :] = durations
+        data[0, :] = starts * fs
+        data[1, :] = durations * fs
     return data
