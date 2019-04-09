@@ -98,7 +98,6 @@ class EventDataset(Dataset):
 
             self.signals[record] = {
                 "data": data,
-                "number_of_windows": number_of_windows,
                 "size": signal_size,
             }
 

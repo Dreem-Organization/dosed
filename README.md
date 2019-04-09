@@ -103,53 +103,6 @@ Required structure for the .h5 files is the following:
 
 This code is the only dataset-specific code that you will need to write.
 
-##### 2.2 To Memmap
-
-To Train the model, we first convert generic h5 to memmaps files. This allows:
-- Selecting which signals we want to train on
-- Selecting which events we want to train on
-- Allows multi-threading
-
-The *to_memmap.py* script extracts data from the .h5 files, normalizes them and saves them in memmap files. Two variables define this process. The argument *signals* allows to configurate the minimun and maximum clipping boundaries for each signal. Additionally, the argument *events* allows to specify the name of the event types under consideration and the ground truth (note that .h5 files can contain several ground truth versions).
-
-Configuration of variable *signals* . e.g.
-
-```python
-signals = [
-    {
-        'h5_path': '/path/to/signal_1',  # signal path in the h5
-        'processing': {  # processing to apply
-            "type": "clip_and_normalize",
-            "args": {
-                    "min_value": -150,
-                "max_value": 150,
-            }
-        }
-    },
-    {
-        'h5_path': '/path/to/signal_2',
-        'processing': {
-            "type": "clip_and_normalize",
-            "args": {
-                    "min_value": -150,
-                "max_value": 150,
-            }
-        }
-    }
-]
-```
-
-and of variable *events*. e.g.
-
-```javascript
-events = [
-    {
-        "name": "event_1",  # name of the event
-        "h5_path": "/path/to/event_1/",  # event path in the h5
-    },
-]
-```
-
-#### 3. Training and testing
+#### 2. Training and testing
 
 The jupyter notebook *train\_and\_evaluate\_dosed.ipynb* goes through the training process in detail, describing all important training parameters. It also explains how to generate predictions, and provides a plot of a spindle detection.
