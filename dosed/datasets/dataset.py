@@ -15,9 +15,8 @@ from ..utils import get_h5_data, get_h5_events
 
 class EventDataset(Dataset):
 
-    """Extract data from dataset created with h5_to_memmap
-    Take a dataset with an index, and open each record to make signals and
-    events available
+    """Extract data and events from h5 files and provide efficient way to retrieve windows with
+    their corresponding events.
 
     args
     ====
@@ -37,7 +36,8 @@ class EventDataset(Dataset):
     n_jobs:
         Number of process used to extract and normalize signals from h5 files.
     cache_data:
-        Cache results of extraction and normalization of signals from h5_file in h5_directory + "/.cache" (we strongly recommand to set True)
+        Cache results of extraction and normalization of signals from h5_file in h5_directory + "/.cache"
+        We strongly recommand to keep the default True to avoid memory overhead.
     minimum_overlap:
         For an event on the edge to be considered included in a window
     ratio_positive:
@@ -105,7 +105,7 @@ class EventDataset(Dataset):
         self.index_to_record = []
         self.index_to_record_event = []  # link index to record
 
-        # preprocess memmaps containing data
+        # Preprocess signals from records
         data = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(get_data)(
             filename="{}/{}".format(h5_directory, record),
             signals=signals,
@@ -328,10 +328,11 @@ class EventDataset(Dataset):
 
 
 class BalancedEventDataset(EventDataset):
-    """Extract data from dataset created with h5_to_memmap
-    Take a dataset with an index, and open each record to make signal and
-    events available. Balance window with positive events and window with
-    negative events"""
+    """
+    Same as EventDataset but with the possibility to choose the probability to get at least
+    one event when retrieving a window.
+
+    """
 
     def __init__(self,
                  h5_directory,
