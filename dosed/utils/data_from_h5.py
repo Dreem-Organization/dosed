@@ -4,7 +4,7 @@ import numpy as np
 
 import h5py
 
-from ..preprocessings import normalizers
+from ..preprocessing import normalizers
 
 
 def get_h5_data(filename, signals, downsampling_rate):
