@@ -13,7 +13,7 @@ def h5_directory():
 
 @pytest.fixture
 def records(h5_directory):
-    train, validation, test = get_train_validation_test(h5_directory, 50, 50)
+    train, validation, test = get_train_validation_test(h5_directory, 50, 50, seed=2008)
     return train + validation + test
 
 

@@ -1,6 +1,6 @@
 import torch
 
-from dosed.preprocessings import GaussianNoise, RescaleNormal, Invert
+from dosed.preprocessing import GaussianNoise, RescaleNormal, Invert
 from dosed.utils import Compose
 
 

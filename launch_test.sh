@@ -1,1 +1,0 @@
-python -m pytest --cov-config .coveragerc --cov=./dosed --cov-fail-under=90 --cov-report=term-missing
