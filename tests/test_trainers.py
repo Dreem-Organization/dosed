@@ -51,6 +51,7 @@ def test_full_training():
         minimum_overlap=0.5,
         transformations=lambda x: x,
         ratio_positive=0.5,
+        n_jobs=-1,
     )
 
     # default events

@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from matplotlib import gridspec
-from joblib import Memory
+from joblib import Memory, Parallel, delayed
 
 import torch
 from torch.utils.data import Dataset
@@ -39,6 +39,8 @@ class EventDataset(Dataset):
                  window,
                  downsampling_rate=1,
                  records=None,
+                 n_jobs=1,
+                 cache_data=True,
                  minimum_overlap=0.5,
                  transformations=None
                  ):
@@ -71,9 +73,12 @@ class EventDataset(Dataset):
         assert len(set([event["name"] for event in events])) == len(events)
 
         # ### joblib cache
-        memory = Memory(h5_directory + "/.cache/", mmap_mode="r", verbose=0)
-        get_h5_data_cached = memory.cache(get_h5_data)
-        get_h5_events_cached = memory.cache(get_h5_events)
+        get_data = get_h5_data
+        get_events = get_h5_events
+        if cache_data:
+            memory = Memory(h5_directory + "/.cache/", mmap_mode="r", verbose=0)
+            get_data = memory.cache(get_h5_data)
+            get_events = memory.cache(get_h5_events)
 
         self.window_size = int(self.window * self.fs)
         self.number_of_channels = len(signals)
@@ -86,13 +91,15 @@ class EventDataset(Dataset):
         self.events = {}
         self.index_to_record = []
         self.index_to_record_event = []  # link index to record
-        for record in self.records:
-            filename = "{}/{}".format(h5_directory, record)
-            data = get_h5_data_cached(
-                filename=filename,
-                signals=signals,
-                downsampling_rate=downsampling_rate,
-            )
+
+        # preprocess memmaps containing data
+        data = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(get_data)(
+            filename="{}/{}".format(h5_directory, record),
+            signals=signals,
+            downsampling_rate=downsampling_rate
+        ) for record in self.records)
+
+        for record, data in zip(self.records, data):
             signal_size = data.shape[-1]
             number_of_windows = signal_size // self.window_size
 
@@ -111,8 +118,8 @@ class EventDataset(Dataset):
             self.events[record] = {}
             number_of_events = 0
             for label, event in enumerate(events):
-                data = get_h5_events_cached(
-                    filename=filename,
+                data = get_events(
+                    filename="{}/{}".format(h5_directory, record),
                     event=event,
                     fs=self.fs,
                 )
@@ -322,7 +329,9 @@ class BalancedEventDataset(EventDataset):
                  records=None,
                  minimum_overlap=0.5,
                  transformations=None,
-                 ratio_positive=0.5
+                 ratio_positive=0.5,
+                 n_jobs=1,
+                 cache_data=True,
                  ):
         super(BalancedEventDataset, self).__init__(
             h5_directory=h5_directory,
@@ -332,6 +341,8 @@ class BalancedEventDataset(EventDataset):
             downsampling_rate=downsampling_rate,
             records=records,
             transformations=transformations,
+            n_jobs=n_jobs,
+            cache_data=cache_data,
         )
         self.ratio_positive = ratio_positive
 
