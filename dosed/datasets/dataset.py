@@ -18,18 +18,31 @@ class EventDataset(Dataset):
     """Extract data from dataset created with h5_to_memmap
     Take a dataset with an index, and open each record to make signals and
     events available
-    __init__
-    ========e
-        index_filename
-        window: size of window in seconds
-        transform_parameters
-        minimum_overlap: minimum jaccard to consoder an event in a window
-        percentage_validation: where to switch from trainers to val
-    __getitem__
-    ===========
-        returns_
-            - input signal of size (number_of_channels, window_size)
-            - events in window
+
+    args
+    ====
+
+    h5_directory:
+        Location of the generic h5 files.
+    signals:
+        The signals from the h5 we want to include together with their normalization
+    events:
+        The events from the h5 we want to train on
+    window:
+        Window size in seconds
+    downsampling_rate:
+        Downsampling rate to apply to signals
+    records:
+        Use to select subset of records from h5_directory, default is None and uses all available recordings
+    n_jobs:
+        Number of process used to extract and normalize signals from h5 files.
+    cache_data:
+        Cache results of extraction and normalization of signals from h5_file in h5_directory + "/.cache" (we strongly recommand to set True)
+    minimum_overlap:
+        For an event on the edge to be considered included in a window
+    ratio_positive:
+        Sample within a training batch will have a probability of "ratio_positive" to contain at least one spindle
+
     """
 
     def __init__(self,
