@@ -55,7 +55,7 @@ def test_full_training():
     )
 
     # default events
-    default_event_sizes = [1 * dataset.fs, 2 * dataset.fs]
+    default_event_sizes = [1 * dataset.fs, 0.5 * dataset.fs]
 
     net = DOSED3(
         input_shape=dataset.input_shape,
