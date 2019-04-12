@@ -1,5 +1,5 @@
 import random
-import json
+import os
 
 import torch
 
@@ -14,22 +14,19 @@ def collate(batch):
     return torch.stack(batch_eegs, 0), batch_events
 
 
-def get_train_validation_test(data_index_filename,
+def get_train_validation_test(h5_directory,
                               percent_test,
                               percent_validation,
-                              seed_test=2018,
-                              seed_validation=0):
-    data_index = json.load(open(data_index_filename, "r"))
+                              seed=None):
 
-    records = data_index["records"]
+    records = [x for x in os.listdir(h5_directory) if x != ".cache"]
 
-    random.seed(seed_test)
+    random.seed(seed)
     index_test = int(len(records) * percent_test / 100)
     random.shuffle(records)
     test = records[:index_test]
     records_train = records[index_test:]
 
-    random.seed(seed_validation)
     index_validation = int(len(records_train) * percent_validation / 100)
     random.shuffle(records_train)
     validation = records_train[:index_validation]

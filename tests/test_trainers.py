@@ -1,5 +1,3 @@
-import json
-
 import torch
 
 from dosed.datasets import BalancedEventDataset
@@ -7,26 +5,60 @@ from dosed.models import DOSED3
 from dosed.trainers import trainers
 
 
-def test_balanced_dataset():
-    data_index_filename = "./tests/test_files/memmap/index.json"
-    index = json.load(open(data_index_filename))
-    records = index["records"]
+def test_full_training():
+    h5_directory = "./tests/test_files/h5/"
+
     window = 1  # in seconds
+
+    signals = [
+        {
+            'h5_path': '/eeg_0',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        },
+        {
+            'h5_path': '/eeg_1',
+            'processing': {
+                "type": "clip_and_normalize",
+                "args": {
+                        "min_value": -150,
+                    "max_value": 150,
+                }
+            }
+        }
+    ]
+
+    events = [
+        {
+            "name": "spindle",
+            "h5_path": "spindle",
+        },
+    ]
+
     device = torch.device("cuda")
 
     dataset = BalancedEventDataset(
-        data_index_filename=data_index_filename,
-        records=records,
+        h5_directory=h5_directory,
+        signals=signals,
+        events=events,
         window=window,
-        ratio_positive=1,
-        transformations=lambda x: x
+        downsampling_rate=1,
+        minimum_overlap=0.5,
+        transformations=lambda x: x,
+        ratio_positive=0.5,
+        n_jobs=-1,
     )
 
     # default events
-    default_event_sizes = [1 * dataset.fs, 2 * dataset.fs]
+    default_event_sizes = [1 * dataset.fs, 0.5 * dataset.fs]
 
     net = DOSED3(
-        input_size=(dataset.input_size, 2),
+        input_shape=dataset.input_shape,
         number_of_classes=dataset.number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,

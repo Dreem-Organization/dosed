@@ -2,8 +2,12 @@ import boto3
 from botocore import UNSIGNED
 from botocore.client import Config
 import tqdm
+import os
+import sys
 
-from settings import MINIMUM_EXAMPLE_SETTINGS
+download_directory = sys.argv[1]
+if not os.path.isdir(download_directory):
+    os.makedirs(download_directory)
 
 bucket_name = 'dreem-dosed-minimum-example'
 
@@ -16,5 +20,5 @@ for bucket_object in tqdm.tqdm(bucket_objects):
     client.download_file(
         Bucket=bucket_name,
         Key=filename,
-        Filename=MINIMUM_EXAMPLE_SETTINGS["download_directory"] + "/{}".format(filename)
+        Filename=download_directory + "/{}".format(filename)
     )

@@ -1,75 +1,123 @@
 """Dataset Class for DOSED training"""
 
-import json
+import os
+import h5py
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from matplotlib import gridspec
+from joblib import Memory, Parallel, delayed
 
 import torch
 from torch.utils.data import Dataset
 
+from ..utils import get_h5_data, get_h5_events
+
 
 class EventDataset(Dataset):
 
-    """Extract data from dataset created with h5_to_memmap
-    Take a dataset with an index, and open each record to make signals and
-    events available
-    __init__
-    ========e
-        index_filename
-        window: size of window in seconds
-        transform_parameters
-        minimum_overlap: minimum jaccard to consoder an event in a window
-        percentage_validation: where to switch from trainers to val
-    __getitem__
-    ===========
-        returns_
-            - input signal of size (number_of_channels, window_size)
-            - events in window
+    """Extract data and events from h5 files and provide efficient way to retrieve windows with
+    their corresponding events.
+
+    args
+    ====
+
+    h5_directory:
+        Location of the generic h5 files.
+    signals:
+        The signals from the h5 we want to include together with their normalization
+    events:
+        The events from the h5 we want to train on
+    window:
+        Window size in seconds
+    downsampling_rate:
+        Downsampling rate to apply to signals
+    records:
+        Use to select subset of records from h5_directory, default is None and uses all available recordings
+    n_jobs:
+        Number of process used to extract and normalize signals from h5 files.
+    cache_data:
+        Cache results of extraction and normalization of signals from h5_file in h5_directory + "/.cache"
+        We strongly recommand to keep the default True to avoid memory overhead.
+    minimum_overlap:
+        For an event on the edge to be considered included in a window
+    ratio_positive:
+        Sample within a training batch will have a probability of "ratio_positive" to contain at least one spindle
+
     """
 
     def __init__(self,
-                 data_index_filename,
+                 h5_directory,
+                 signals,
+                 events,
                  window,
-                 records,
+                 downsampling_rate=1,
+                 records=None,
+                 n_jobs=1,
+                 cache_data=True,
                  minimum_overlap=0.5,
                  transformations=None
                  ):
 
-        self.data_index = json.load(open(data_index_filename))
-        self.number_of_classes = len(self.data_index["events"])
+        self.number_of_classes = len(events)
         self.transformations = transformations
 
         # window parameters
         self.window = window
-        self.records = records
 
-        self.fs = self.data_index["sampling_frequency"]
+        # records (all of them by default)
+        if records is not None:
+            for record in records:
+                assert record in os.listdir(h5_directory)
+            self.records = records
+        else:
+            self.records = [x for x in os.listdir(h5_directory) if x != ".cache"]
+
+        ###########################
+        #  Checks on H5
+        # Check sampling frequencies
+        fs = set(
+            [h5py.File("{}/{}".format(h5_directory, record))[signal["h5_path"]].attrs["fs"]
+             for record in self.records for signal in signals]
+        )
+        assert len(fs) == 1
+        self.fs = fs.pop() / downsampling_rate
+
+        # check event names
+        assert len(set([event["name"] for event in events])) == len(events)
+
+        # ### joblib cache
+        get_data = get_h5_data
+        get_events = get_h5_events
+        if cache_data:
+            memory = Memory(h5_directory + "/.cache/", mmap_mode="r", verbose=0)
+            get_data = memory.cache(get_h5_data)
+            get_events = memory.cache(get_h5_events)
+
         self.window_size = int(self.window * self.fs)
-        self.input_size = self.window_size
-        self.minimum_overlap = minimum_overlap
-        self.number_of_channels = len(self.data_index["signals"])
+        self.number_of_channels = len(signals)
+        # used in network architecture
+        self.input_shape = (self.number_of_channels, self.window_size)
+        self.minimum_overlap = minimum_overlap  # for events on the edge of window_size
 
         # Open signals and events
         self.signals = {}
         self.events = {}
         self.index_to_record = []
         self.index_to_record_event = []  # link index to record
-        for record in self.records:
-            assert record in self.data_index["records"]
 
-            data = np.memmap(
-                record + "_signals.mm",
-                dtype='float32',
-                mode='r'
-            ).reshape((self.number_of_channels, -1))
+        # Preprocess signals from records
+        data = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(get_data)(
+            filename="{}/{}".format(h5_directory, record),
+            signals=signals,
+            downsampling_rate=downsampling_rate
+        ) for record in self.records)
 
+        for record, data in zip(self.records, data):
             signal_size = data.shape[-1]
             number_of_windows = signal_size // self.window_size
 
             self.signals[record] = {
                 "data": data,
-                "number_of_windows": number_of_windows,
                 "size": signal_size,
             }
 
@@ -82,21 +130,18 @@ class EventDataset(Dataset):
 
             self.events[record] = {}
             number_of_events = 0
-            for label, event in enumerate(self.data_index["events"]):
-                try:
-                    data = np.memmap(
-                        record + "_{}.mm".format(event["name"]),
-                        dtype='float32',
-                        mode='r'
-                    ).reshape((2, -1)) * self.fs
-                except FileNotFoundError:
-                    pass
-                else:
-                    number_of_events += data.shape[-1]
-                    self.events[record][event["name"]] = {
-                        "data": data,
-                        "label": label,
-                    }
+            for label, event in enumerate(events):
+                data = get_events(
+                    filename="{}/{}".format(h5_directory, record),
+                    event=event,
+                    fs=self.fs,
+                )
+
+                number_of_events += data.shape[-1]
+                self.events[record][event["name"]] = {
+                    "data": data,
+                    "label": label,
+                }
 
             self.index_to_record_event.extend([
                 {
@@ -283,25 +328,35 @@ class EventDataset(Dataset):
 
 
 class BalancedEventDataset(EventDataset):
-    """Extract data from dataset created with h5_to_memmap
-    Take a dataset with an index, and open each record to make signal and
-    events available. Balance window with positive events and window with
-    negative events"""
+    """
+    Same as EventDataset but with the possibility to choose the probability to get at least
+    one event when retrieving a window.
+
+    """
 
     def __init__(self,
-                 data_index_filename,
+                 h5_directory,
+                 signals,
+                 events,
                  window,
-                 records,
+                 downsampling_rate=1,
+                 records=None,
                  minimum_overlap=0.5,
                  transformations=None,
-                 ratio_positive=0.5
+                 ratio_positive=0.5,
+                 n_jobs=1,
+                 cache_data=True,
                  ):
         super(BalancedEventDataset, self).__init__(
-            data_index_filename=data_index_filename,
+            h5_directory=h5_directory,
+            signals=signals,
+            events=events,
             window=window,
-            minimum_overlap=minimum_overlap,
+            downsampling_rate=downsampling_rate,
             records=records,
             transformations=transformations,
+            n_jobs=n_jobs,
+            cache_data=cache_data,
         )
         self.ratio_positive = ratio_positive
 
