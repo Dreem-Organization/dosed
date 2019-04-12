@@ -60,7 +60,7 @@ A minimum example is provided in the folder */minimum\_example* directory.
 
 Running the script ipython notebook *download_and_data_format_explanation.ipynb* or run `make download_example` to download, pre-processes training data.
 
-##### 2.1 To H5
+##### H5 data format
 
 To work with different datasets, and hence data format, we first require you to convert you original
 data and annotation into H5 files for each record. *download_and_data_format_explanation.ipynb* and *to_h5.py* provides detailed explanation and an example of that process.
@@ -95,6 +95,6 @@ Required structure for the .h5 files is the following:
 
 This code is the only dataset-specific code that you will need to write.
 
-#### 2. Training and testing
+#### Training and testing
 
 The jupyter notebook *train\_and\_evaluate\_dosed.ipynb* goes through the training process in detail, describing all important training parameters. It also explains how to generate predictions, and provides a plot of a spindle detection.
