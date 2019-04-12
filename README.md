@@ -53,25 +53,17 @@ The example works out-of-the-box given the following considerations.
 
 Packages detailed in *requirements.txt* need to be installed for the example to work.
 
-A settings.py file is used at the root of the project to manage data location. We provide a default
-file that should work out of the box and download data in ROOT_PROJECT/data with:
 
-`cp settings-template.py settings.py`
+#### 2. Minimum example
 
-If you want to store data in another location, change the *settings.py* accordingly.
+A minimum example is provided in the folder */minimum\_example* directory.
 
-#### 2. Data
-
-Running the script *download\_and\_format\_data.sh* from the */minimum\_example* directory automatically downloads, pre-processes and saves the EEG data in the correct format for training and testing DOSED at
-the location provided in your *settings.py*.
-
-Furthemore, the jupyter notebook *download\_and\_data\_format\_explanation.ipynb* provides detailed explanation about the aforementioned steps and about the data formats used to store the information, together with visualizations of the events under consideration.
+Running the script ipython notebook *download_and_data_format_explanation.ipynb* or run `make download_example` to download, pre-processes training data.
 
 ##### 2.1 To H5
 
 To work with different datasets, and hence data format, we first require you to convert you original
-data and annotation into H5 files for each record. An example is provided with the minimum_example 
-going from EDF data format + json annotations into H5 format.
+data and annotation into H5 files for each record. *download_and_data_format_explanation.ipynb* and *to_h5.py* provides detailed explanation and an example of that process.
 
 Required structure for the .h5 files is the following:
 
