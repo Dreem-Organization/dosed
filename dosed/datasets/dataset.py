@@ -37,7 +37,7 @@ class EventDataset(Dataset):
         Number of process used to extract and normalize signals from h5 files.
     cache_data:
         Cache results of extraction and normalization of signals from h5_file in h5_directory + "/.cache"
-        We strongly recommand to keep the default True to avoid memory overhead.
+        We strongly recommend to keep the default value True to avoid memory overhead.
     minimum_overlap:
         For an event on the edge to be considered included in a window
     ratio_positive:
@@ -48,8 +48,8 @@ class EventDataset(Dataset):
     def __init__(self,
                  h5_directory,
                  signals,
-                 events,
                  window,
+                 events=None,
                  downsampling_rate=1,
                  records=None,
                  n_jobs=1,
@@ -58,7 +58,8 @@ class EventDataset(Dataset):
                  transformations=None
                  ):
 
-        self.number_of_classes = len(events)
+        if events:
+            self.number_of_classes = len(events)
         self.transformations = transformations
 
         # window parameters
@@ -73,7 +74,7 @@ class EventDataset(Dataset):
             self.records = [x for x in os.listdir(h5_directory) if x != ".cache"]
 
         ###########################
-        #  Checks on H5
+        # Checks on H5
         # Check sampling frequencies
         fs = set(
             [h5py.File("{}/{}".format(h5_directory, record))[signal["h5_path"]].attrs["fs"]
@@ -83,7 +84,8 @@ class EventDataset(Dataset):
         self.fs = fs.pop() / downsampling_rate
 
         # check event names
-        assert len(set([event["name"] for event in events])) == len(events)
+        if events:
+            assert len(set([event["name"] for event in events])) == len(events)
 
         # ### joblib cache
         get_data = get_h5_data
@@ -128,27 +130,28 @@ class EventDataset(Dataset):
                 } for x in range(number_of_windows)
             ])
 
-            self.events[record] = {}
-            number_of_events = 0
-            for label, event in enumerate(events):
-                data = get_events(
-                    filename="{}/{}".format(h5_directory, record),
-                    event=event,
-                    fs=self.fs,
-                )
+            if events:
+                self.events[record] = {}
+                number_of_events = 0
+                for label, event in enumerate(events):
+                    data = get_events(
+                        filename="{}/{}".format(h5_directory, record),
+                        event=event,
+                        fs=self.fs,
+                    )
 
-                number_of_events += data.shape[-1]
-                self.events[record][event["name"]] = {
-                    "data": data,
-                    "label": label,
-                }
+                    number_of_events += data.shape[-1]
+                    self.events[record][event["name"]] = {
+                        "data": data,
+                        "label": label,
+                    }
 
-            self.index_to_record_event.extend([
-                {
-                    "record": record,
-                    "max_index": signal_size - self.window_size
-                } for _ in range(number_of_events)
-            ])
+                self.index_to_record_event.extend([
+                    {
+                        "record": record,
+                        "max_index": signal_size - self.window_size
+                    } for _ in range(number_of_events)
+                ])
 
     def __len__(self):
         return len(self.index_to_record)
@@ -337,8 +340,8 @@ class BalancedEventDataset(EventDataset):
     def __init__(self,
                  h5_directory,
                  signals,
-                 events,
                  window,
+                 events=None,
                  downsampling_rate=1,
                  records=None,
                  minimum_overlap=0.5,
@@ -354,6 +357,7 @@ class BalancedEventDataset(EventDataset):
             window=window,
             downsampling_rate=downsampling_rate,
             records=records,
+            minimum_overlap=minimum_overlap,
             transformations=transformations,
             n_jobs=n_jobs,
             cache_data=cache_data,
