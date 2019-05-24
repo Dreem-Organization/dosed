@@ -66,7 +66,7 @@ def test_dataset(signals, events, h5_directory, records):
         h5_directory=h5_directory,
         signals=signals,
         events=events,
-        records=records,
+        records=sorted(records),
         window=window,
         downsampling_rate=1,
         minimum_overlap=0.5,
