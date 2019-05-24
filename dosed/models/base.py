@@ -3,7 +3,7 @@ import tempfile
 import json
 import shutil
 import numpy as np
-
+from torch import storage
 import torch
 import torch.nn as nn
 
@@ -18,7 +18,9 @@ class BaseNet(nn.Module):
     @property
     def device(self):
         try:
-            return next(self.parameters()).get_device()
+            out = next(self.parameters()).get_device()
+            return (out if isinstance(out, torch.device)
+                    else torch.device('cpu'))
         except Exception:
             return torch.device('cpu')
 
@@ -40,15 +42,19 @@ class BaseNet(nn.Module):
         return filename
 
     @classmethod
-    def load(cls, filename):
+    def load(cls, filename, use_device=torch.device('cpu')):
         with tarfile.open(filename, "r") as tar:
             net_parameters = json.loads(
                 tar.extractfile("net_params.json").read().decode("utf-8"))
             path = tempfile.mkdtemp()
             tar.extract("state.torch", path=path)
             net = cls(**net_parameters)
-            net.load_state_dict(torch.load(path + "/state.torch"))
-
+            net.load_state_dict(
+                torch.load(
+                    path + "/state.torch",
+                    map_location=use_device,
+                )
+            )
         return net, net_parameters
 
     def predict_dataset(self,
@@ -72,11 +78,9 @@ class BaseNet(nn.Module):
 
         # List of dicts, to save predictions of each class per record
         predictions = {}
-
         for record in inference_dataset.records:
-
             predictions[record] = []
-            result = np.zeros((inference_dataset.number_of_classes,
+            result = np.zeros((self.number_of_classes - 1,
                                inference_dataset.signals[record]["size"]))
             for signals, times in inference_dataset.get_record_batch(
                     record,
