@@ -17,7 +17,7 @@ class BaseNet(nn.Module):
     @property
     def device(self):
         try:
-            out = next(self.parameters()).get_device()
+            out = next(self.parameters()).device
             return (out if isinstance(out, torch.device)
                     else torch.device('cpu'))
         except Exception:
