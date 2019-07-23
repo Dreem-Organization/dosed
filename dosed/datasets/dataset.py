@@ -49,6 +49,7 @@ class EventDataset(Dataset):
                  h5_directory,
                  signals,
                  window,
+                 fs=None,
                  events=None,
                  downsampling_rate=1,
                  records=None,
@@ -76,12 +77,15 @@ class EventDataset(Dataset):
         ###########################
         # Checks on H5
         # Check sampling frequencies
-        fs = set(
-            [h5py.File("{}/{}".format(h5_directory, record))[signal["h5_path"]].attrs["fs"]
-             for record in self.records for signal in signals]
-        )
-        assert len(fs) == 1
-        self.fs = fs.pop() / downsampling_rate
+        if fs is None:
+            fs = set(
+                [h5py.File("{}/{}".format(h5_directory, record))[signal["h5_path"]].attrs["fs"]
+                 for record in self.records for signal in signals]
+            )
+            assert len(fs) == 1
+            self.fs = fs.pop() / downsampling_rate
+        else:
+            self.fs = fs / downsampling_rate
 
         # check event names
         if events:
