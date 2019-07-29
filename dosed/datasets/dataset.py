@@ -49,9 +49,8 @@ class EventDataset(Dataset):
                  h5_directory,
                  signals,
                  window,
-                 fs=None,
+                 resampling_fs=None,
                  events=None,
-                 downsampling_rate=1,
                  records=None,
                  n_jobs=1,
                  cache_data=True,
@@ -77,15 +76,13 @@ class EventDataset(Dataset):
         ###########################
         # Checks on H5
         # Check sampling frequencies
-        if fs is None:
-            fs = set(
-                [h5py.File("{}/{}".format(h5_directory, record))[signal["h5_path"]].attrs["fs"]
-                 for record in self.records for signal in signals]
-            )
-            assert len(fs) == 1
-            self.fs = fs.pop() / downsampling_rate
+        signals_fs = [signal['fs'] for signal in signals]
+        if resampling_fs is None:
+            assert len(set(signals_fs)) == 1
+            self.fs = signals_fs[0]
+            resampling_fs = self.fs
         else:
-            self.fs = fs / downsampling_rate
+            self.fs = resampling_fs
 
         # check event names
         if events:
@@ -115,7 +112,7 @@ class EventDataset(Dataset):
         data = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(get_data)(
             filename="{}/{}".format(h5_directory, record),
             signals=signals,
-            downsampling_rate=downsampling_rate
+            resampling_fs=resampling_fs
         ) for record in self.records)
 
         for record, data in zip(self.records, data):
@@ -346,8 +343,7 @@ class BalancedEventDataset(EventDataset):
                  signals,
                  window,
                  events=None,
-                 fs=None,
-                 downsampling_rate=1,
+                 resampling_fs=None,
                  records=None,
                  minimum_overlap=0.5,
                  transformations=None,
@@ -360,8 +356,7 @@ class BalancedEventDataset(EventDataset):
             signals=signals,
             events=events,
             window=window,
-            fs=fs,
-            downsampling_rate=downsampling_rate,
+            resampling_fs=resampling_fs,
             records=records,
             minimum_overlap=minimum_overlap,
             transformations=transformations,
