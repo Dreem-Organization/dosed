@@ -49,7 +49,7 @@ class EventDataset(Dataset):
                  h5_directory,
                  signals,
                  window,
-                 resampling_fs=None,
+                 fs,
                  events=None,
                  records=None,
                  n_jobs=1,
@@ -75,14 +75,7 @@ class EventDataset(Dataset):
 
         ###########################
         # Checks on H5
-        # Check sampling frequencies
-        signals_fs = [signal['fs'] for signal in signals]
-        if resampling_fs is None:
-            assert len(set(signals_fs)) == 1
-            self.fs = signals_fs[0]
-            resampling_fs = self.fs
-        else:
-            self.fs = resampling_fs
+        self.fs = fs
 
         # check event names
         if events:
@@ -112,7 +105,7 @@ class EventDataset(Dataset):
         data = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(get_data)(
             filename="{}/{}".format(h5_directory, record),
             signals=signals,
-            resampling_fs=resampling_fs
+            fs=fs
         ) for record in self.records)
 
         for record, data in zip(self.records, data):
@@ -342,8 +335,8 @@ class BalancedEventDataset(EventDataset):
                  h5_directory,
                  signals,
                  window,
+                 fs,
                  events=None,
-                 resampling_fs=None,
                  records=None,
                  minimum_overlap=0.5,
                  transformations=None,
@@ -356,7 +349,7 @@ class BalancedEventDataset(EventDataset):
             signals=signals,
             events=events,
             window=window,
-            resampling_fs=resampling_fs,
+            fs=fs,
             records=records,
             minimum_overlap=minimum_overlap,
             transformations=transformations,

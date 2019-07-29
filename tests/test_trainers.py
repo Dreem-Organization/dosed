@@ -49,7 +49,7 @@ def test_full_training():
         signals=signals,
         events=events,
         window=window,
-        resampling_fs=None,
+        fs=64,
         minimum_overlap=0.5,
         transformations=lambda x: x,
         ratio_positive=0.5,
