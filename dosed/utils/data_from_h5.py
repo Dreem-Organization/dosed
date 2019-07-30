@@ -17,6 +17,7 @@ def get_h5_data(filename, signals, fs):
 
         t_target = np.cumsum([1 / fs] * signal_size)
         data = np.zeros((len(signals), signal_size))
+
         for i, signal in enumerate(signals):
             t_source = np.cumsum([1 / signal["fs"]] *
                                  h5[signal["h5_path"]].size)
