@@ -14,15 +14,15 @@ def get_h5_data(filename, signals, fs):
 
     with h5py.File(filename, "r") as h5:
 
-        time_window = min(set([int(h5[signal["h5_path"]].size / signal['fs'])
+        time_window = min(set([h5[signal["h5_path"]].size / signal['fs']
                                for signal in signals]))
 
         t_target = np.cumsum([1 / fs] * int(time_window * fs))
 
-        data = np.zeros((len(signals), time_window * fs))
+        data = np.zeros((len(signals), int(time_window * fs)))
         for i, signal in enumerate(signals):
             t_source = np.cumsum([1 / signal["fs"]] *
-                                 int(time_window * signal["fs"]))
+                                 h5[signal["h5_path"]].size)
             normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
             data[i, :] = interp1d(t_source, normalizer(h5[signal["h5_path"]][:]))(t_target)
     return data
