@@ -5,22 +5,26 @@ import numpy as np
 import h5py
 
 from ..preprocessing import normalizers
+from scipy.interpolate import interp1d
 
 
-def get_h5_data(filename, signals, downsampling_rate):
+def get_h5_data(filename, signals, fs):
     import time
     time.sleep(5)
+
     with h5py.File(filename, "r") as h5:
-        # Check that all signals have the same size and sampling frequency
-        signals_size = set([int(h5[signal["h5_path"]].size) for signal in signals])
-        assert len(signals_size) == 1, "Different signal sizes found!"
-        signal_size = len(range(0, signals_size.pop(), downsampling_rate))
 
-        data = np.zeros((len(signals), signal_size))
+        time_window = min(set([int(h5[signal["h5_path"]].size / signal['fs'])
+                               for signal in signals]))
+
+        t_target = np.cumsum([1 / fs] * int(time_window * fs))
+
+        data = np.zeros((len(signals), time_window * fs))
         for i, signal in enumerate(signals):
+            t_source = np.cumsum([1 / signal["fs"]] *
+                                 int(time_window * signal["fs"]))
             normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
-            data[i, :] = normalizer(h5[signal["h5_path"]][:])[::downsampling_rate]
-
+            data[i, :] = interp1d(t_source, normalizer(h5[signal["h5_path"]][:]))(t_target)
     return data
 
 

@@ -13,6 +13,7 @@ def test_full_training():
     signals = [
         {
             'h5_path': '/eeg_0',
+            'fs': 64,
             'processing': {
                 "type": "clip_and_normalize",
                 "args": {
@@ -23,6 +24,7 @@ def test_full_training():
         },
         {
             'h5_path': '/eeg_1',
+            'fs' : 64,
             'processing': {
                 "type": "clip_and_normalize",
                 "args": {
@@ -47,7 +49,7 @@ def test_full_training():
         signals=signals,
         events=events,
         window=window,
-        downsampling_rate=1,
+        fs=64,
         minimum_overlap=0.5,
         transformations=lambda x: x,
         ratio_positive=0.5,
