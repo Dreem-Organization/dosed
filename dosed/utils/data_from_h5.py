@@ -9,17 +9,14 @@ from scipy.interpolate import interp1d
 
 
 def get_h5_data(filename, signals, fs):
-    import time
-    time.sleep(5)
-
     with h5py.File(filename, "r") as h5:
 
-        time_window = min(set([h5[signal["h5_path"]].size / signal['fs']
-                               for signal in signals]))
+        signal_size = int(fs * min(
+            set([h5[signal["h5_path"]].size / signal['fs'] for signal in signals])
+        ))
 
-        t_target = np.cumsum([1 / fs] * int(time_window * fs))
-
-        data = np.zeros((len(signals), int(time_window * fs)))
+        t_target = np.cumsum([1 / fs] * signal_size)
+        data = np.zeros((len(signals), signal_size))
         for i, signal in enumerate(signals):
             t_source = np.cumsum([1 / signal["fs"]] *
                                  h5[signal["h5_path"]].size)
