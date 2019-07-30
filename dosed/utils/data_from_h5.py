@@ -12,23 +12,19 @@ def get_h5_data(filename, signals, fs):
     import time
     time.sleep(5)
 
-    signals_fs = [signal['fs'] for signal in signals]
-    downsampling_rates = [signal['fs'] / fs for signal in signals]
-
     with h5py.File(filename, "r") as h5:
 
-        # Check that all signals have the same size after resampling  to target frequency
-        signals_size = set([int(h5[signal["h5_path"]].size / f)
-                            for signal, f in zip(signals, signals_fs)])
-        signal_size = min(signals_size)
+        time_window = min(set([int(h5[signal["h5_path"]].size / signal['fs'])
+                               for signal in signals]))
 
-        t_source = [np.linspace(0, signal_size, signal_size * f) for f in signals_fs]
-        t_target = np.linspace(0, signal_size, signal_size * fs)
+        t_target = np.cumsum([1 / fs] * int(time_window * fs))
 
-        data = np.zeros((len(signals), signal_size * fs))
+        data = np.zeros((len(signals), time_window * fs))
         for i, signal in enumerate(signals):
+            t_source = np.cumsum([1 / signal["fs"]] *
+                                 int(time_window * signal["fs"]))
             normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
-            data[i, :] = interp1d(t_source[i],normalizer(h5[signal["h5_path"]][:]))(t_target)
+            data[i, :] = interp1d(t_source, normalizer(h5[signal["h5_path"]][:]))(t_target)
     return data
 
 
@@ -42,4 +38,3 @@ def get_h5_events(filename, event, fs):
         data[0, :] = starts * fs
         data[1, :] = durations * fs
     return data
-
