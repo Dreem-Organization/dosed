@@ -126,7 +126,7 @@ class TrainerBase:
                     self.metric_to_maximize]:
                 best_metrics_epoch = {
                     metric: np.nanmean(
-                        [m[self.metric_to_maximize] for m in metrics_thresh])
+                        [m[metric] for m in metrics_thresh])
                     for metric in self.metrics.keys()
                 }
 
