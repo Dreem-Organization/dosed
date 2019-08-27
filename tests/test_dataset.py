@@ -2,6 +2,7 @@ import shutil
 import pytest
 import time
 import os
+from unittest.mock import patch
 
 from dosed.datasets import BalancedEventDataset, EventDataset, get_train_validation_test
 
@@ -130,6 +131,19 @@ def test_balanced_dataset_ratio_0(h5_directory, signals, events, records):
     assert len(dataset) == 103
 
 
+def mock_clip_and_normalize(min_value, max_value):
+    def clipper(x, min_value=min_value, max_value=max_value):
+        # time.sleep(1)
+        return x
+    return clipper
+
+
+normalizer = {
+    "clip_and_normalize": mock_clip_and_normalize
+}
+
+
+@patch("dosed.utils.data_from_h5.normalizers", normalizer)
 def test_parallel_is_faster(h5_directory, signals, events, records, cache_directory):
 
     dataset_parameters = {
