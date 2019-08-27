@@ -24,7 +24,7 @@ def get_h5_data(filename, signals, fs):
             normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
             data[i, :] = interp1d(t_source, normalizer(h5[signal["h5_path"]][:]),
                                   fill_value="extrapolate")(t_target)
-            assert max(y_target) <= max(t_source), "{}!={}".format(max(t_target), max(t_source))
+            assert max(t_target) <= max(t_source), "{}!={}".format(max(t_target), max(t_source))
     return data
 
 
