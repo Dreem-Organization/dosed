@@ -133,7 +133,7 @@ def test_balanced_dataset_ratio_0(h5_directory, signals, events, records):
 
 def mock_clip_and_normalize(min_value, max_value):
     def clipper(x, min_value=min_value, max_value=max_value):
-        # time.sleep(1)
+        time.sleep(1)
         return x
     return clipper
 
