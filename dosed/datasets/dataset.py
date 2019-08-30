@@ -127,6 +127,7 @@ class EventDataset(Dataset):
             if events:
                 self.events[record] = {}
                 number_of_events = 0
+                events_indexes = set()
                 for label, event in enumerate(events):
                     data = get_events(
                         filename="{}/{}".format(h5_directory, record),
@@ -140,10 +141,21 @@ class EventDataset(Dataset):
                         "label": label,
                     }
 
+                    for start, duration in zip(*data):
+                        valid_index = range(int(max(0, start - self.window_size + 1)),
+                                            int(min(signal_size - self.window_size, start + duration + self.window_size)))
+                        events_indexes.update(valid_index)
+
+                no_events_indexes = set(range(signal_size - self.window_size))
+                no_events_indexes = list(no_events_indexes.difference(events_indexes))
+                events_indexes = list(events_indexes)
+
                 self.index_to_record_event.extend([
                     {
                         "record": record,
-                        "max_index": signal_size - self.window_size
+                        "max_index": signal_size - self.window_size,
+                        "events_indexes": events_indexes,
+                        "no_events_indexes": no_events_indexes,
                     } for _ in range(number_of_events)
                 ])
 
@@ -365,7 +377,9 @@ class BalancedEventDataset(EventDataset):
 
         signal, events = self.extract_balanced_data(
             record=self.index_to_record_event[idx]["record"],
-            max_index=self.index_to_record_event[idx]["max_index"]
+            max_index=self.index_to_record_event[idx]["max_index"],
+            events_indexes=self.index_to_record_event[idx]["events_indexes"],
+            no_events_indexes=self.index_to_record_event[idx]["no_events_indexes"]
         )
 
         if self.transformations is not None:
@@ -373,19 +387,17 @@ class BalancedEventDataset(EventDataset):
 
         return signal, events
 
-    def extract_balanced_data(self, record, max_index):
+    def extract_balanced_data(self, record, max_index, events_indexes, no_events_indexes):
         """Extracts an index at random"""
-        index = np.random.randint(max_index)
-        signal_data, events_data = self.get_sample(record, index)
-        choice = np.random.choice([0, 1],
-                                  p=[1 - self.ratio_positive,
-                                     self.ratio_positive])
+
+        choice = np.random.choice([0, 1], p=[1 - self.ratio_positive, self.ratio_positive])
+
         if choice == 0:
-            while len(events_data) > 0:
-                index = np.random.randint(max_index)
-                signal_data, events_data = self.get_sample(record, index)
+            # np.random.choice is too slow when not used with vectorised data
+            index = no_events_indexes[np.random.randint(len(no_events_indexes))]
         else:
-            while len(events_data) == 0:
-                index = np.random.randint(max_index)
-                signal_data, events_data = self.get_sample(record, index)
+            index = events_indexes[np.random.randint(len(events_indexes))]
+
+        signal_data, events_data = self.get_sample(record, index)
+
         return signal_data, events_data
