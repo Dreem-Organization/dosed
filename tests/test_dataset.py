@@ -6,7 +6,8 @@ from unittest.mock import patch
 
 from dosed.datasets import BalancedEventDataset, EventDataset, get_train_validation_test
 
-
+import torch; torch.manual_seed(2008)
+import random; random.seed(2008)
 @pytest.fixture
 def h5_directory():
     return "./tests/test_files/h5/"
@@ -98,11 +99,14 @@ def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
         transformations=lambda x: x,
         ratio_positive=1,
     )
-
-    signal, events_data = dataset[0]
-
-    assert tuple(signal.shape) == (2, 64)
-    assert events_data.shape[1] == 3
+    nb = 0
+    for i in range(len(dataset)):
+        signal, events_data = dataset[i]
+        #assert len(events_data) != 0, print(i)
+        #assert tuple(signal.shape) == (2, 64)
+        #assert events_data.shape[1] == 3
+        nb += int(len(events_data) != 0)
+    assert nb == len(dataset), nb / len(dataset)
 
     number_of_events = sum(
         [len(dataset.get_record_events(record)[0]) for record in records]
@@ -125,10 +129,14 @@ def test_balanced_dataset_ratio_0(h5_directory, signals, events, records):
         ratio_positive=0,
     )
 
-    signal, events_data = dataset[0]
-
-    assert len(events_data) == 0
     assert len(dataset) == 103
+
+    nb = 0
+    for i in range(len(dataset)):
+        signal, events_data = dataset[i]
+        #assert len(events_data) == 0
+        nb += int(len(events_data) == 0)
+    assert nb == len(dataset), nb / len(dataset)
 
 
 def mock_clip_and_normalize(min_value, max_value):

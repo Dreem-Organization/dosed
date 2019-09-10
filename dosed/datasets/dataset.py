@@ -12,6 +12,10 @@ from torch.utils.data import Dataset
 
 from ..utils import get_h5_data, get_h5_events
 
+import torch; torch.manual_seed(2008)
+import random; random.seed(2008)
+np.random.seed(2008)
+
 
 class EventDataset(Dataset):
 
@@ -89,10 +93,11 @@ class EventDataset(Dataset):
             get_data = memory.cache(get_h5_data)
             get_events = memory.cache(get_h5_events)
 
-        self.window_size = int(self.window * self.fs)
-        self.number_of_channels = len(signals)
+        self.number_of_channels = {
+            "spec": len([signal for signal in signals if "spectrogram" in signal]),
+            "raw": len([signal for signal in signals if "spectrogram" not in signal]),
+        }
         # used in network architecture
-        self.input_shape = (self.number_of_channels, self.window_size)
         self.minimum_overlap = minimum_overlap  # for events on the edge of window_size
 
         # Open signals and events
@@ -105,11 +110,33 @@ class EventDataset(Dataset):
         data = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(get_data)(
             filename="{}/{}".format(h5_directory, record),
             signals=signals,
-            fs=fs
+            fs=fs,
+            window=self.window
         ) for record in self.records)
 
+        ##################
+        # Set all variables of the dataset
+        set_fs = set([d.pop('fs', None) for d in data])
+        assert len(set_fs) == 1, set_fs
+        self.fs = set_fs.pop()
+
+        set_window_size = set([d.pop('window_size', None) for d in data])
+        assert len(set_window_size) == 1, set_window_size
+        self.window_size = set_window_size.pop()
+
+        self.input_shape = dict()
+        if self.number_of_channels["raw"] > 0:
+            self.input_shape["raw"] = (self.number_of_channels["raw"],
+                                       self.window_size)
+
+        if self.number_of_channels["spec"] > 0:
+            self.input_shape["spec"] = (self.number_of_channels["spec"],
+                                        data[0]["spec"].size(-2),
+                                        self.window_size),
+        ##################
+
         for record, data in zip(self.records, data):
-            signal_size = data.shape[-1]
+            signal_size = data.pop('signal_size', None)
             number_of_windows = signal_size // self.window_size
 
             self.signals[record] = {
@@ -172,10 +199,9 @@ class EventDataset(Dataset):
         return len(self.index_to_record)
 
     def __getitem__(self, idx):
-        signal, events = self.get_sample(
+        signals, events = self.get_sample(
             record=self.index_to_record[idx]["record"],
             index=self.index_to_record[idx]["index"])
-
         if self.transformations is not None:
             for signal_type, signal in signals.items():
                 signals[signal_type] = self.transformations(signal)
@@ -261,16 +287,18 @@ class EventDataset(Dataset):
         for batch in range(number_of_batches_in_record):
             start = batch_overlap_size * batch
             stop = batch_overlap_size * batch + read_size
-            signal = self.signals[record]["data"][:, start:stop]
 
-            signal_strided = torch.FloatTensor(
-                as_strided(
-                    x=signal,
-                    shape=(batch_size, signal.shape[0], self.window_size),
-                    strides=(signal.strides[1] * stride, signal.strides[0],
-                             signal.strides[1]),
+            signal_strided = dict()
+            for signal_type, signal in self.signals[record]["data"].items():
+                signal = signal[..., start:stop]
+                signal_strided[signal_type] = torch.FloatTensor(
+                    as_strided(
+                        x=signal,
+                        shape=(batch_size, signal.shape[0], self.window_size),
+                        strides=(signal.strides[1] * stride, signal.strides[0],
+                                 signal.strides[1]),
+                    )
                 )
-            )
             time = t[start:stop]
             t_strided = as_strided(
                 x=time,
@@ -288,16 +316,19 @@ class EventDataset(Dataset):
             read_size_end = (batch_end - 1) * stride + self.window_size
             start = batch_overlap_size * number_of_batches_in_record
             end = batch_overlap_size * number_of_batches_in_record + read_size_end
-            signal = self.signals[record]["data"][:, start:end]
 
-            signal_strided = torch.FloatTensor(
-                as_strided(
-                    x=signal,
-                    shape=(batch_end, signal.shape[0], self.window_size),
-                    strides=(signal.strides[1] * stride, signal.strides[0],
-                             signal.strides[1]),
+            signal_strided = dict()
+            for signal_type, signal in self.signals[record]["data"].items():
+                signal = signal[..., start:end]
+                signal_strided[signal_type] = torch.FloatTensor(
+                    as_strided(
+                        x=signal,
+                        shape=(batch_end, signal.shape[0], self.window_size),
+                        strides=(signal.strides[1] * stride, signal.strides[0],
+                                 signal.strides[1]),
+                    )
                 )
-            )
+
             time = t[start:end]
             t_strided = as_strided(
                 x=time,
@@ -350,7 +381,9 @@ class EventDataset(Dataset):
     def get_sample(self, record, index):
         """Return a sample [sata, events] from a record at a particularindex"""
 
-        signal_data = self.signals[record]["data"][:, index: index + self.window_size]
+        signal_data = dict()
+        for signal_type, signal in self.signals[record]["data"].items():
+            signal_data[signal_type] = torch.FloatTensor(signal[:, index: index + self.window_size])
         events_data = []
 
         for event_name, event in self.events[record].items():
@@ -359,14 +392,14 @@ class EventDataset(Dataset):
             # Relative start stop
             starts_relative = (starts - index) / self.window_size
             durations_relative = durations / self.window_size
-            stops_relative = starts_relative + durations_relative
+            stops_relative = starts_relative + durations_relative - 1 / self.window_size
 
             for valid_index in self.get_valid_events_index(index, starts, durations):
                 events_data.append((max(0, float(starts_relative[valid_index])),
                                     min(1, float(stops_relative[valid_index])),
                                     event["label"]))
 
-        return torch.FloatTensor(signal_data), torch.FloatTensor(events_data)
+        return signal_data, torch.FloatTensor(events_data)
 
 class BalancedEventDataset(EventDataset):
     """
@@ -407,7 +440,7 @@ class BalancedEventDataset(EventDataset):
 
     def __getitem__(self, idx):
 
-        signal, events = self.extract_balanced_data(
+        signals, events = self.extract_balanced_data(
             record=self.index_to_record_event[idx]["record"],
             max_index=self.index_to_record_event[idx]["max_index"],
             events_indexes=self.index_to_record_event[idx]["events_indexes"],
@@ -415,9 +448,10 @@ class BalancedEventDataset(EventDataset):
         )
 
         if self.transformations is not None:
-            signal = self.transformations(signal)
+            for signal_type, signal in signals.items():
+                signals[signal_type] = self.transformations(signal)
 
-        return signal, events
+        return signals, events
 
     def extract_balanced_data(self, record, max_index, events_indexes, no_events_indexes):
         """Extracts an index at random"""

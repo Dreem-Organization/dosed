@@ -7,11 +7,20 @@ import torch
 def collate(batch):
     """collate fn because unconsistent number of events"""
     batch_events = []
-    batch_eegs = []
+    batch_eegs_raw = []
+    batch_eegs_spec = []
     for eeg, events in batch:
-        batch_eegs.append(eeg)
+        if "raw" in eeg:
+            batch_eegs_raw.append(eeg["raw"])
+        if "spec" in eeg:
+            batch_eegs_spec.append(eeg["spec"])
         batch_events.append(events)
-    return torch.stack(batch_eegs, 0), batch_events
+    batch_eegs = {}
+    if len(batch_eegs_raw) > 0:
+        batch_eegs["raw"] = torch.stack(batch_eegs_raw, 0)
+    if len(batch_eegs_spec) > 0:
+        batch_eegs["raw"] = torch.stack(batch_eegs_spec, 0)
+    return batch_eegs, batch_events
 
 
 def get_train_validation_test(h5_directory,

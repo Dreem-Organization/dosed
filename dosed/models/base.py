@@ -85,7 +85,7 @@ class BaseNet(nn.Module):
                     record,
                     batch_size=int(batch_size),
                     stride=overlap):
-                x = signals.to(self.device)
+                x = {signal_type: signal.to(self.device) for signal_type, signal in signals.items()}
                 batch_predictions = self.predict(x)
 
                 for events, time in zip(batch_predictions, times):

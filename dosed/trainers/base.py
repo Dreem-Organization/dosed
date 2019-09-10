@@ -145,7 +145,7 @@ class TrainerBase:
 
         # Get signals and labels
         signals, events = data
-        x = signals.to(self.net.device)
+        x = {signal_type: signal.to(self.net.device) for signal_type, signal in signals.items()}
 
         # Forward
         localizations, classifications, localizations_default = self.net.forward(x)
