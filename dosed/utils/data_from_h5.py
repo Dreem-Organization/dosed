@@ -49,16 +49,18 @@ def get_h5_data(filename, signals, fs, window):
 
         if len(signals_spec) > 0:
             # /!\ Force resampling frequency to be the same as the spectrogram's one
-            nb_windows_spec = int(time_window * fs) // (window * signals[signals_spec[0]]["fs"])
+            nb_windows_spec = int(time_window * signals[signals_spec[0]]["fs"]) // (window * fs)
+            signal_size = tsz * nb_windows_spec
             data_spec = np.zeros((len(signals_spec),
                                   fsz,
-                                  tsz * nb_windows_spec))
-            fs_raw = tsz * nb_windows_spec / time_window
+                                  signal_size))
+            fs_raw = tsz / window  # tsz * nb_windows_spec / time_window
             t_target_spec = np.cumsum([1 / fs] * int(time_window * fs))
 
         if len(signals_raw) > 0:
-            data_raw = np.zeros((len(signals_raw), int(time_window * fs_raw)))
-            t_target_raw = np.cumsum([1 / fs_raw] * int(time_window * fs_raw))
+            signal_size = int(time_window * fs_raw)
+            data_raw = np.zeros((len(signals_raw), signal_size))
+            t_target_raw = np.cumsum([1 / fs_raw] * signal_size)
 
         # Preprocess raw signals
         for i, signal in enumerate([signals[k] for k in signals_raw]):
@@ -76,15 +78,15 @@ def get_h5_data(filename, signals, fs, window):
 
             data_spec[i, :] = spectrogram(
                 interpolator(h5[signal["h5_path"]][:]),
-                signal['fs'],
+                fs,
                 window, nperseg, nfft,
                 downsampling_t, downsampling_f, padded)
             data_spec[i, :] = normalizer(data_spec[i, :])
 
         data_dict = {
-            "fs": fs,
+            "fs": fs_raw,
             "window_size": int(window * fs_raw),
-            "signal_size": int(time_window * fs_raw),
+            "signal_size": signal_size,
         }
 
         if len(signals_raw) > 0:

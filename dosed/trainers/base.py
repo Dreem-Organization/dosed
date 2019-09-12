@@ -245,15 +245,18 @@ class TrainerBase:
 
             for i, data in enumerate(dataloader_val, 0):
 
-                (loss_classification_positive,
-                 loss_classification_negative,
-                 loss_localization) = self.get_batch_loss(data)
+                self.net.eval()
 
-                epoch_loss_classification_positive_val += \
-                    loss_classification_positive
-                epoch_loss_classification_negative_val += \
-                    loss_classification_negative
-                epoch_loss_localization_val += loss_localization
+                with torch.no_grad():
+                    (loss_classification_positive,
+                     loss_classification_negative,
+                     loss_localization) = self.get_batch_loss(data)
+
+                    epoch_loss_classification_positive_val += \
+                        loss_classification_positive
+                    epoch_loss_classification_negative_val += \
+                        loss_classification_negative
+                    epoch_loss_localization_val += loss_localization
 
             epoch_loss_classification_positive_val /= (i + 1)
             epoch_loss_classification_negative_val /= (i + 1)

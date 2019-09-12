@@ -24,20 +24,22 @@ class DOSED4(BaseNet):
                  number_of_classes,
                  detection_parameters,
                  default_event_sizes,
-                 conv_spec_layers="[[16 , (2,5), (1,2), (0,0), (2,2)]] + "
-                                  "[[32 , (2,5), (1,2), (0,0), (2,2)]] + "
-                                  "[[64 , (2,5), (1,2), (0,0), (2,2)]] + "
-                                  "[[128, (1,3), (1,1), (0,0), (1,2)]] + "
-                                  "[[128, (1,3), (1,1), (0,0), (1,2)]] + "
-                                  "[[128, (1,3), (1,1), (0,0), (1,2)]]",
-                 conv_raw_layers="[[16 , (5,), (2,), (0,), (2,)]] + "
-                                 "[[32 , (5,), (2,), (0,), (2,)]] + "
-                                 "[[64 , (5,), (2,), (0,), (2,)]] + "
-                                 "[[128, (3,), (1,), (0,), (2,)]] + "
-                                 "[[128, (3,), (1,), (0,), (2,)]] + "
-                                 "[[128, (3,), (1,), (0,), (2,)]]",
+                 conv_spec_layers="[[16 , (2,2), (1,1), (2,0), (2,2)]] + "
+                                  "[[64, (2,2), (1,1), (2,0), (2,2)]]",
+                 conv_raw_layers="[[4 , (5,), (1,), (0,), (2,)]] + "
+                                 "[[8 , (5,), (1,), (0,), (2,)]] + "
+                                 "[[16, (5,), (1,), (0,), (2,)]] + "
+                                 "[[32, (5,), (1,), (0,), (2,)]] + "
+                                 "[[64, (5,), (1,), (0,), (2,)]]",
                  pdrop=0.1,
                  fs=256):
+
+        """
+             - conv_spec_layers : layers for data as spectrogram
+             - conv_raw_layers : layers for raw data
+            Both are a list of layers, where each layer is a tuple :
+            (channels, kernel, stride,padding, pooling)
+        """
 
         super(DOSED4, self).__init__()
         self.raw_channels = 0
@@ -125,27 +127,30 @@ class DOSED4(BaseNet):
             return x
 
         if self.spec_channels == 0:
-            tsz_final = conv(self.window_size, self.conv_raw_layers, dim=0)
+            kernel_size = conv(self.window_size, self.conv_raw_layers, dim=0)
             in_channels = self.conv_raw_layers[-1][0]
         else:
             fsz_final = conv(self.fsz, self.conv_spec_layers, dim=0)
-            tsz_final = conv(self.window_size, self.conv_spec_layers, dim=1)
+            tsz_spec_final = conv(self.window_size, self.conv_spec_layers, dim=1)
             if self.raw_channels == 0:
-                in_channels = self.conv_spec_layers[-1][0] * fsz_final
+                in_channels = self.conv_spec_layers[-1][0]  # * fsz_final
+                kernel_size = tsz_spec_final * fsz_final
             else:
-                in_channels = self.conv_spec_layers[-1][0] * (fsz_final + 1)
+                tsz_raw_final = conv(self.window_size, self.conv_raw_layers, dim=0)
+                in_channels = self.conv_spec_layers[-1][0]  # * (fsz_final + 1)
+                kernel_size = tsz_spec_final * fsz_final + tsz_raw_final
 
         self.localizations = nn.Conv1d(
             in_channels=in_channels,
             out_channels=2 * len(self.localizations_default),
-            kernel_size=tsz_final,
+            kernel_size=kernel_size,
             padding=0,
         )
 
         self.classifications = nn.Conv1d(
             in_channels=in_channels,
             out_channels=self.number_of_classes * len(self.localizations_default),
-            kernel_size=tsz_final,
+            kernel_size=kernel_size,
             padding=0,
         )
 
@@ -161,16 +166,15 @@ class DOSED4(BaseNet):
                     x_spectro = block(x_spectro)
                 for block in self.blocks_raw:
                     x_raw = block(x_raw)
-                bsz, csz, tsz = x_raw.shape
-                x_raw = x_raw.view(bsz, csz, 1, tsz)
+                bsz, csz, fsz, tsz = x_spectro.shape
+                x_spectro = x_spectro.view(bsz, csz, fsz * tsz)
                 x = torch.cat((x_spectro, x_raw), 2)
             else:
                 x = x["spec"]
                 for block in self.blocks_spectro:
                     x = block(x)
-
-            bsz, csz, fsz, tsz = x.shape
-            x = x.view(bsz, csz * fsz, tsz)
+                bsz, csz, fsz, tsz = x.shape
+                x = x.view(bsz, csz, fsz * tsz)
 
         else:
             x = x["raw"]

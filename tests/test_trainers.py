@@ -1,7 +1,7 @@
 import torch
 
 from dosed.datasets import BalancedEventDataset
-from dosed.models import DOSED3
+from dosed.models import DOSED4
 from dosed.trainers import trainers
 
 
@@ -24,14 +24,21 @@ def test_full_training():
         },
         {
             'h5_path': '/eeg_1',
-            'fs' : 64,
+            'fs': 64,
             'processing': {
                 "type": "clip_and_normalize",
                 "args": {
                         "min_value": -150,
                     "max_value": 150,
                 }
-            }
+            },
+            'spectrogram': {
+                "nperseg": 8,
+                "nfft": 8,
+                "downsampling_t": 1,
+                "downsampling_f": 1,
+                "padded": True,
+            },
         }
     ]
 
@@ -59,7 +66,7 @@ def test_full_training():
     # default events
     default_event_sizes = [1 * dataset.fs, 0.5 * dataset.fs]
 
-    net = DOSED3(
+    net = DOSED4(
         input_shape=dataset.input_shape,
         number_of_classes=dataset.number_of_classes,
         detection_parameters={

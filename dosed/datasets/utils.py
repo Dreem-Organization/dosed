@@ -19,7 +19,8 @@ def collate(batch):
     if len(batch_eegs_raw) > 0:
         batch_eegs["raw"] = torch.stack(batch_eegs_raw, 0)
     if len(batch_eegs_spec) > 0:
-        batch_eegs["raw"] = torch.stack(batch_eegs_spec, 0)
+        batch_eegs["spec"] = torch.stack(batch_eegs_spec, 0)
+
     return batch_eegs, batch_events
 
 

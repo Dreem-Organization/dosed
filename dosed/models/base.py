@@ -93,7 +93,6 @@ class BaseNet(nn.Module):
                         start = int(round(event[0] * window_size + time[0]))
                         stop = int(round(event[1] * window_size + time[0]))
                         result[event[2], start:stop] = 1
-
             predicted_events = [binary_to_array(k) for k in result]
             assert len(predicted_events) == self.number_of_classes - 1
             for event_num in range(self.number_of_classes - 1):
