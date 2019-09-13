@@ -130,11 +130,11 @@ class DOSED4(BaseNet):
             fsz_final = conv(self.fsz, self.conv_spec_layers, dim=0)
             tsz_spec_final = conv(self.window_size, self.conv_spec_layers, dim=1)
             if self.raw_channels == 0:
-                in_channels = self.conv_spec_layers[-1][0]  # * fsz_final
+                in_channels = self.conv_spec_layers[-1][0]
                 kernel_size = tsz_spec_final * fsz_final
             else:
                 tsz_raw_final = conv(self.window_size, self.conv_raw_layers, dim=0)
-                in_channels = self.conv_spec_layers[-1][0]  # * (fsz_final + 1)
+                in_channels = self.conv_spec_layers[-1][0]
                 kernel_size = tsz_spec_final * fsz_final + tsz_raw_final
 
         self.localizations = nn.Conv1d(

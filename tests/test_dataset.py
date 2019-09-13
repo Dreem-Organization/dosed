@@ -114,8 +114,6 @@ def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
         transformations=lambda x: x,
         ratio_positive=1,
     )
-<<<<<<< HEAD
-<<<<<<< HEAD
     number_of_events = 0
     for i in range(len(dataset)):
         signals, events_data = dataset[i]
@@ -130,32 +128,6 @@ def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
             assert events_data.shape[1] == 3
             number_of_events += 1
     assert number_of_events == len(dataset), number_of_events / len(dataset)
-=======
-    nb = 0
-    for i in range(len(dataset)):
-        signal, events_data = dataset[i]
-        #assert len(events_data) != 0, print(i)
-        #assert tuple(signal.shape) == (2, 64)
-        #assert events_data.shape[1] == 3
-        nb += int(len(events_data) != 0)
-    assert nb == len(dataset), nb / len(dataset)
->>>>>>> [dosed4] Add dosed4 and spectrogram preprocessing
-=======
-    number_of_events = 0
-    for i in range(len(dataset)):
-        signals, events_data = dataset[i]
-        for signal_type, signal in signals.items():
-            assert signal_type in ["raw", "spec"]
-            if signal_type == "raw":
-                assert tuple(signals[signal_type].shape) == (1, int(dataset.fs))
-            elif signal_type == "spec":
-                assert tuple(signals[signal_type].shape) == (1, 5, int(dataset.fs))
-
-        if len(events_data) != 0:
-            assert events_data.shape[1] == 3
-            number_of_events += 1
-    assert number_of_events == len(dataset), number_of_events / len(dataset)
->>>>>>> [dosed4] Add tests + change dataset resampling and features concatenation in dosed4
 
     number_of_events = sum(
         [len(dataset.get_record_events(record)[0]) for record in records]
@@ -180,28 +152,11 @@ def test_balanced_dataset_ratio_0(h5_directory, signals, events, records):
 
     assert len(dataset) == 103
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     nb_without_event = 0
     for i in range(len(dataset)):
         signal, events_data = dataset[i]
         nb_without_event += int(len(events_data) == 0)
     assert nb_without_event == len(dataset), nb_without_event / len(dataset)
-=======
-    nb = 0
-    for i in range(len(dataset)):
-        signal, events_data = dataset[i]
-        #assert len(events_data) == 0
-        nb += int(len(events_data) == 0)
-    assert nb == len(dataset), nb / len(dataset)
->>>>>>> [dosed4] Add dosed4 and spectrogram preprocessing
-=======
-    nb_without_event = 0
-    for i in range(len(dataset)):
-        signal, events_data = dataset[i]
-        nb_without_event += int(len(events_data) == 0)
-    assert nb_without_event == len(dataset), nb_without_event / len(dataset)
->>>>>>> [dosed4] Add tests + change dataset resampling and features concatenation in dosed4
 
 
 def mock_clip_and_normalize(min_value, max_value):

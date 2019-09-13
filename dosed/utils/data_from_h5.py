@@ -3,6 +3,7 @@
 import numpy as np
 
 import h5py
+import json
 
 from ..preprocessing import normalizers, spectrogram, get_interpolator
 
@@ -46,6 +47,7 @@ def get_h5_data(filename, signals, fs, window):
     with h5py.File(filename, "r") as h5:
 
         time_window = min(set([h5[signal["h5_path"]].size / signal['fs'] for signal in signals]))
+        signal_size = None
 
         if len(signals_spec) > 0:
             # /!\ Force resampling frequency to be the same as the spectrogram's one
@@ -58,7 +60,8 @@ def get_h5_data(filename, signals, fs, window):
             t_target_spec = np.cumsum([1 / fs] * int(time_window * fs))
 
         if len(signals_raw) > 0:
-            signal_size = int(time_window * fs_raw)
+            if signal_size is None:
+                signal_size = int(time_window * fs_raw)
             data_raw = np.zeros((len(signals_raw), signal_size))
             t_target_raw = np.cumsum([1 / fs_raw] * signal_size)
 
@@ -98,12 +101,30 @@ def get_h5_data(filename, signals, fs, window):
 
 
 def get_h5_events(filename, event, fs):
-    with h5py.File(filename, "r") as h5:
-        starts = h5[event["h5_path"]]["start"][:]
-        durations = h5[event["h5_path"]]["duration"][:]
-        assert len(starts) == len(durations), "Inconsistents event durations and starts"
 
-        data = np.zeros((2, len(starts)))
-        data[0, :] = starts * fs
-        data[1, :] = durations * fs
+    if "h5_path" in event:
+        with h5py.File(filename, "r") as h5:
+            starts = h5[event["h5_path"]]["start"][:]
+            durations = h5[event["h5_path"]]["duration"][:]
+            assert len(starts) == len(durations), "Inconsistents event durations and starts"
+
+            data = np.zeros((2, len(starts)))
+            data[0, :] = starts * fs
+            data[1, :] = durations * fs
+    elif "json" in event:
+        filename = filename[:-3] + ".json"
+        with open(filename) as f:
+            f = json.load(f)
+            starts = []
+            durations = []
+            for event in f["labels"]:
+                starts.append(event["start"])
+                durations.append(event["end"] - event["start"])
+
+            assert len(starts) == len(durations), "Inconsistents event durations and starts"
+
+            data = np.zeros((2, len(starts)))
+            data[0, :] = np.array(starts) * fs
+            data[1, :] = np.array(durations) * fs
+
     return data
