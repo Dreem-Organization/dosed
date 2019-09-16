@@ -128,6 +128,8 @@ class EventDataset(Dataset):
                 self.events[record] = {}
                 number_of_events = 0
                 events_indexes = set()
+                max_index = signal_size - self.window_size
+
                 for label, event in enumerate(events):
                     data = get_events(
                         filename="{}/{}".format(h5_directory, record),
@@ -142,18 +144,26 @@ class EventDataset(Dataset):
                     }
 
                     for start, duration in zip(*data):
-                        valid_index = range(int(max(0, start - self.window_size + 1)),
-                                            int(min(signal_size - self.window_size, start + duration + self.window_size)))
-                        events_indexes.update(valid_index)
+                        stop = start + duration
+                        duration_overlap = duration * self.minimum_overlap
 
-                no_events_indexes = set(range(signal_size - self.window_size))
+                        start_valid_index = int(round(
+                            max(0, start + duration_overlap - self.window_size)))
+                        end_valid_index = int(round(
+                            min(max_index + 1, stop - duration_overlap + 1)))
+
+                        indexes = np.arange(start_valid_index, end_valid_index)
+                        events_indexes.update(
+                            indexes[self.get_valid_index(indexes, start, duration)])
+
+                no_events_indexes = set(range(max_index + 1))
                 no_events_indexes = list(no_events_indexes.difference(events_indexes))
                 events_indexes = list(events_indexes)
 
                 self.index_to_record_event.extend([
                     {
                         "record": record,
-                        "max_index": signal_size - self.window_size,
+                        "max_index": max_index,
                         "events_indexes": events_indexes,
                         "no_events_indexes": no_events_indexes,
                     } for _ in range(number_of_events)
@@ -170,6 +180,49 @@ class EventDataset(Dataset):
         if self.transformations is not None:
             signal = self.transformations(signal)
         return signal, events
+
+    def get_valid_index(self, index, start, duration):
+        """Return the indexes of the time indexes with enough overlap with an event
+           This function can broadcast either index or (start,duration) :
+              index -> numpy array
+              start, duration -> floats
+              OR
+              -> float
+              start, duration -> numpy arrays
+        """
+
+        # Relative start stop
+        starts_relative = (start - index) / self.window_size
+        durations_relative = duration / self.window_size if np.issubdtype(type(index), np.number)\
+            else [duration / self.window_size] * len(index)
+        stops_relative = starts_relative + durations_relative
+
+        # Find valid start or stop
+        valid_starts_index = np.where((starts_relative > 0) *
+                                      (starts_relative < 1))[0]
+        valid_stops_index = np.where((stops_relative > 0) *
+                                     (stops_relative < 1))[0]
+
+        # merge them
+        valid_indexes = set(list(valid_starts_index) +
+                            list(valid_stops_index))
+
+        # Annotations contains valid index with minimum overlap requirement
+        events_indexes = []
+        for valid_index in valid_indexes:
+            if (valid_index in valid_starts_index) \
+                    and (valid_index in valid_stops_index):
+                events_indexes.append(valid_index)
+            elif valid_index in valid_starts_index:
+                if ((1 - starts_relative[valid_index]) /
+                        durations_relative[valid_index]) > self.minimum_overlap:
+                    events_indexes.append(valid_index)
+
+            elif valid_index in valid_stops_index:
+                if ((stops_relative[valid_index]) / durations_relative[valid_index]) \
+                        > self.minimum_overlap:
+                    events_indexes.append(valid_index)
+        return events_indexes
 
     def get_record_events(self, record):
 
@@ -303,35 +356,10 @@ class EventDataset(Dataset):
             durations_relative = durations / self.window_size
             stops_relative = starts_relative + durations_relative
 
-            # Find valid start or stop
-            valid_starts_index = np.where((starts_relative > 0) *
-                                          (starts_relative < 1))[0]
-            valid_stops_index = np.where((stops_relative > 0) *
-                                         (stops_relative < 1))[0]
-
-            # merge them
-            valid_indexes = set(list(valid_starts_index) +
-                                list(valid_stops_index))
-
-            # Annotations contains valid index with minimum overlap requirement
-            for valid_index in valid_indexes:
-                if (valid_index in valid_starts_index) \
-                        and (valid_index in valid_stops_index):
-                    events_data.append((float(starts_relative[valid_index]),
-                                        float(stops_relative[valid_index]),
-                                        event["label"]))
-                elif valid_index in valid_starts_index:
-                    if ((1 - starts_relative[valid_index]) /
-                            durations_relative[valid_index]) > self.minimum_overlap:
-                        events_data.append((float(starts_relative[valid_index]),
-                                            1, event["label"]))
-
-                elif valid_index in valid_stops_index:
-                    if ((stops_relative[valid_index]) / durations_relative[valid_index]) \
-                            > self.minimum_overlap:
-                        events_data.append((0,
-                                            float(stops_relative[valid_index]),
-                                            event["label"]))
+            for valid_index in self.get_valid_index(index, starts, durations):
+                events_data.append((max(0, float(starts_relative[valid_index])),
+                                    min(1, float(stops_relative[valid_index])),
+                                    event["label"]))
 
         return torch.FloatTensor(signal_data), torch.FloatTensor(events_data)
 
@@ -393,7 +421,6 @@ class BalancedEventDataset(EventDataset):
         choice = np.random.choice([0, 1], p=[1 - self.ratio_positive, self.ratio_positive])
 
         if choice == 0:
-            # np.random.choice is too slow when not used with vectorised data
             index = no_events_indexes[np.random.randint(len(no_events_indexes))]
         else:
             index = events_indexes[np.random.randint(len(events_indexes))]
