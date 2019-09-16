@@ -177,8 +177,9 @@ class EventDataset(Dataset):
             index=self.index_to_record[idx]["index"])
 
         if self.transformations is not None:
-            signal = self.transformations(signal)
-        return signal, events
+            for signal_type, signal in signals.items():
+                signals[signal_type] = self.transformations(signal)
+        return signals, events
 
     def get_valid_events_index(self, index, starts, durations):
         """Return the events' indexes that have enough overlap with the given time index
@@ -366,7 +367,6 @@ class EventDataset(Dataset):
                                     event["label"]))
 
         return torch.FloatTensor(signal_data), torch.FloatTensor(events_data)
-
 
 class BalancedEventDataset(EventDataset):
     """
