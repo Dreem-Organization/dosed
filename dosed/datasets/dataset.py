@@ -153,8 +153,8 @@ class EventDataset(Dataset):
                             min(max_index + 1, stop - duration_overlap + 1)))
 
                         indexes = np.arange(start_valid_index, end_valid_index)
-                        events_indexes.update(
-                            indexes[self.get_valid_index(indexes, start, duration)])
+                        valid_indexes = self.get_valid_indexes(indexes, start, duration)
+                        events_indexes.update(valid_indexes)
 
                 no_events_indexes = set(range(max_index + 1))
                 no_events_indexes = list(no_events_indexes.difference(events_indexes))
@@ -181,20 +181,18 @@ class EventDataset(Dataset):
             signal = self.transformations(signal)
         return signal, events
 
-    def get_valid_index(self, index, start, duration):
-        """Return the indexes of the time indexes with enough overlap with an event
-           This function can broadcast either index or (start,duration) :
-              index -> numpy array
-              start, duration -> floats
-              OR
-              -> float
-              start, duration -> numpy arrays
+    def get_valid_events_index(self, index, starts, durations):
+        """Return the events' indexes that have enough overlap with the given time index
+           ex: index = 155
+               starts =   [10 140 150 165 2000]
+               duration = [4  20  10  10   40]
+               minimum_overlap = 0.5
+               window_size = 15
+           return: [2 3]
         """
-
         # Relative start stop
-        starts_relative = (start - index) / self.window_size
-        durations_relative = duration / self.window_size if np.issubdtype(type(index), np.number)\
-            else [duration / self.window_size] * len(index)
+        starts_relative = (starts - index) / self.window_size
+        durations_relative = durations / self.window_size
         stops_relative = starts_relative + durations_relative
 
         # Find valid start or stop
@@ -223,6 +221,20 @@ class EventDataset(Dataset):
                         > self.minimum_overlap:
                     events_indexes.append(valid_index)
         return events_indexes
+
+    def get_valid_indexes(self, indexes, start, duration):
+        """Return the time indexes that have enough overlap with the event
+           "(start, duration)"
+           ex: indexes = [10 11 12 13 14 15 16 17]
+               start = 13, duration = 2
+               minimum_overlap = 0.5
+               window_size = 3
+           return: [11 12 13 14]
+        """
+        starts = np.array([start] * len(indexes))
+        durations = np.array([duration] * len(indexes))
+        valid_indexes = self.get_valid_events_index(indexes, starts, durations)
+        return indexes[valid_indexes]
 
     def get_record_events(self, record):
 
@@ -356,7 +368,7 @@ class EventDataset(Dataset):
             durations_relative = durations / self.window_size
             stops_relative = starts_relative + durations_relative
 
-            for valid_index in self.get_valid_index(index, starts, durations):
+            for valid_index in self.get_valid_events_index(index, starts, durations):
                 events_data.append((max(0, float(starts_relative[valid_index])),
                                     min(1, float(stops_relative[valid_index])),
                                     event["label"]))
