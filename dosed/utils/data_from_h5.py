@@ -5,7 +5,7 @@ import numpy as np
 import h5py
 import json
 
-from ..preprocessing import normalizers, spectrogram, get_interpolator
+from ..preprocessing import normalizers, filters, spectrogram, get_interpolator
 
 
 def get_h5_data(filename, signals, fs, window):
@@ -71,7 +71,14 @@ def get_h5_data(filename, signals, fs, window):
                 signal["fs"], fs_raw, h5[signal["h5_path"]].size, t_target_raw)
             normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
 
-            data_raw[i, :] = normalizer(interpolator(h5[signal["h5_path"]][:]))
+            if "filter" in signal.keys():
+                filter = filters[signal['filter']['type']](fs=fs_raw, **signal['filter']['args'])
+
+                data_raw[i, :] = interpolator(filter(h5[signal["h5_path"]][:]))
+            else:
+                data_raw[i, :] = interpolator(h5[signal["h5_path"]][:])
+
+            data_raw[i, :] = normalizer(data_raw[i, :])
 
         # Preprocess spectrograms
         for i, signal in enumerate([signals[k] for k in signals_spec]):

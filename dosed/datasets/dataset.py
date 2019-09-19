@@ -12,6 +12,8 @@ from torch.utils.data import Dataset
 
 from ..utils import get_h5_data, get_h5_events
 
+import tqdm
+
 
 class EventDataset(Dataset):
 
@@ -108,7 +110,7 @@ class EventDataset(Dataset):
             signals=signals,
             fs=fs,
             window=self.window
-        ) for record in self.records)
+        ) for record in tqdm.tqdm(self.records))
 
         ##################
         # Set all variables of the dataset
@@ -167,15 +169,23 @@ class EventDataset(Dataset):
                     }
 
                     for start, duration in zip(*data):
-                        stop = start + duration
-                        duration_overlap = duration * self.minimum_overlap
-                        start_valid_index = int(round(
-                            max(0, start + duration_overlap - self.window_size + 1)))
-                        end_valid_index = int(round(
-                            min(max_index + 1, stop - duration_overlap)))
+                        if self.window_size / duration > self.minimum_overlap:
+                            stop = start + duration
+                            duration_overlap = duration * self.minimum_overlap
+                            start_valid_index = int(round(
+                                max(0, start + duration_overlap - self.window_size + 1)))
+                            end_valid_index = int(round(
+                                min(max_index + 1, stop - duration_overlap)))
 
-                        indexes = list(range(start_valid_index, end_valid_index))
-                        events_indexes.update(indexes)
+                            indexes = list(range(start_valid_index, end_valid_index))
+                            # Check borders
+                            if self.get_valid_events_index(start_valid_index - 1,
+                                                           [start], [duration]):
+                                indexes.append(start_valid_index - 1)
+                            if self.get_valid_events_index(end_valid_index + 1,
+                                                           [start], [duration]):
+                                indexes.append(end_valid_index + 1)
+                            events_indexes.update(indexes)
 
                 no_events_indexes = set(range(max_index + 1))
                 no_events_indexes = list(no_events_indexes.difference(events_indexes))
@@ -212,6 +222,9 @@ class EventDataset(Dataset):
            return: [2 3]
         """
         # Relative start stop
+
+        starts = np.array(starts)
+        durations = np.array(durations)
 
         starts_relative = (starts - index) / self.window_size
         durations_relative = durations / self.window_size
@@ -394,6 +407,7 @@ class EventDataset(Dataset):
                                     event["label"]))
 
         return signal_data, torch.FloatTensor(events_data)
+
 
 class BalancedEventDataset(EventDataset):
     """
