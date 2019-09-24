@@ -261,6 +261,7 @@ class EventDataset(Dataset):
             elif valid_index in valid_inside_index:
                 if self.window_size / durations[valid_index] > self.minimum_overlap:
                     events_indexes.append(valid_index)
+
         return events_indexes
 
     def get_record_events(self, record):

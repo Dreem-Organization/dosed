@@ -27,9 +27,11 @@ def collate(batch):
 def get_train_validation_test(h5_directory,
                               percent_test,
                               percent_validation,
+                              black_list=[],
                               seed=None):
 
-    records = [x for x in os.listdir(h5_directory) if (x != ".cache" and x[-2:] == "h5")]
+    records = [x for x in os.listdir(h5_directory)
+               if (x != ".cache" and x[-2:] == "h5") and x not in black_list]
 
     random.seed(seed)
     index_test = int(len(records) * percent_test / 100)
