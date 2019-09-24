@@ -148,14 +148,11 @@ class EventDataset(Dataset):
                         duration_overlap = duration * self.minimum_overlap
 
                         start_valid_index = int(round(
-                            max(0, start + duration_overlap - self.window_size)))
+                            max(0, start + duration_overlap - self.window_size + 1)))
                         end_valid_index = int(round(
-                            min(max_index + 1, stop - duration_overlap + 1)))
+                            min(max_index + 1, stop - duration_overlap)))
 
-                        indexes = list(range(start_valid_index + 1, end_valid_index - 1))
-                        indexes.extend(self.get_valid_indexes(
-                            [start_valid_index, end_valid_index - 1],
-                            start, duration))
+                        indexes = list(range(start_valid_index, end_valid_index))
                         events_indexes.update(indexes)
 
                 no_events_indexes = set(range(max_index + 1))
@@ -193,6 +190,10 @@ class EventDataset(Dataset):
            return: [2 3]
         """
         # Relative start stop
+
+        starts = np.array(starts)
+        durations = np.array(durations)
+
         starts_relative = (starts - index) / self.window_size
         durations_relative = durations / self.window_size
         stops_relative = starts_relative + durations_relative
@@ -229,21 +230,6 @@ class EventDataset(Dataset):
                 if self.window_size / durations[valid_index] > self.minimum_overlap:
                     events_indexes.append(valid_index)
         return events_indexes
-
-    def get_valid_indexes(self, indexes, start, duration):
-        """Return the time indexes that have enough overlap with the event
-           "(start, duration)"
-           ex: indexes = [10 11 12 13 14 15 16 17]
-               start = 13, duration = 2
-               minimum_overlap = 0.5
-               window_size = 3
-           return: [11 12 13 14]
-        """
-        indexes = np.array(indexes)
-        starts = np.array([start] * len(indexes))
-        durations = np.array([duration] * len(indexes))
-        valid_indexes = self.get_valid_events_index(indexes, starts, durations)
-        return indexes[valid_indexes]
 
     def get_record_events(self, record):
 
