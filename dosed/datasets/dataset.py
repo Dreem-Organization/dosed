@@ -191,9 +191,6 @@ class EventDataset(Dataset):
         """
         # Relative start stop
 
-        starts = np.array(starts)
-        durations = np.array(durations)
-
         starts_relative = (starts - index) / self.window_size
         durations_relative = durations / self.window_size
         stops_relative = starts_relative + durations_relative
