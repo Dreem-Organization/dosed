@@ -148,13 +148,12 @@ class EventDataset(Dataset):
                         duration_overlap = duration * self.minimum_overlap
 
                         start_valid_index = int(round(
-                            max(0, start + duration_overlap - self.window_size)))
+                            max(0, start + duration_overlap - self.window_size + 1)))
                         end_valid_index = int(round(
-                            min(max_index + 1, stop - duration_overlap + 1)))
+                            min(max_index + 1, stop - duration_overlap)))
 
-                        indexes = np.arange(start_valid_index, end_valid_index)
-                        valid_indexes = self.get_valid_indexes(indexes, start, duration)
-                        events_indexes.update(valid_indexes)
+                        indexes = list(range(start_valid_index, end_valid_index))
+                        events_indexes.update(indexes)
 
                 no_events_indexes = set(range(max_index + 1))
                 no_events_indexes = list(no_events_indexes.difference(events_indexes))
@@ -191,6 +190,7 @@ class EventDataset(Dataset):
            return: [2 3]
         """
         # Relative start stop
+
         starts_relative = (starts - index) / self.window_size
         durations_relative = durations / self.window_size
         stops_relative = starts_relative + durations_relative
@@ -201,9 +201,13 @@ class EventDataset(Dataset):
         valid_stops_index = np.where((stops_relative > 0) *
                                      (stops_relative < 1))[0]
 
+        valid_inside_index = np.where((starts_relative <= 0) *
+                                      (stops_relative >= 1))[0]
+
         # merge them
         valid_indexes = set(list(valid_starts_index) +
-                            list(valid_stops_index))
+                            list(valid_stops_index) +
+                            list(valid_inside_index))
 
         # Annotations contains valid index with minimum overlap requirement
         events_indexes = []
@@ -215,26 +219,14 @@ class EventDataset(Dataset):
                 if ((1 - starts_relative[valid_index]) /
                         durations_relative[valid_index]) > self.minimum_overlap:
                     events_indexes.append(valid_index)
-
             elif valid_index in valid_stops_index:
                 if ((stops_relative[valid_index]) / durations_relative[valid_index]) \
                         > self.minimum_overlap:
                     events_indexes.append(valid_index)
+            elif valid_index in valid_inside_index:
+                if self.window_size / durations[valid_index] > self.minimum_overlap:
+                    events_indexes.append(valid_index)
         return events_indexes
-
-    def get_valid_indexes(self, indexes, start, duration):
-        """Return the time indexes that have enough overlap with the event
-           "(start, duration)"
-           ex: indexes = [10 11 12 13 14 15 16 17]
-               start = 13, duration = 2
-               minimum_overlap = 0.5
-               window_size = 3
-           return: [11 12 13 14]
-        """
-        starts = np.array([start] * len(indexes))
-        durations = np.array([duration] * len(indexes))
-        valid_indexes = self.get_valid_events_index(indexes, starts, durations)
-        return indexes[valid_indexes]
 
     def get_record_events(self, record):
 
