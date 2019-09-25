@@ -4,6 +4,7 @@ import numpy as np
 
 import h5py
 import json
+import os
 
 from ..preprocessing import normalizers, filters, spectrogram, get_interpolator
 
@@ -107,31 +108,35 @@ def get_h5_data(filename, signals, fs, window):
     return data_dict
 
 
-def get_h5_events(filename, event, fs):
+def get_h5_events(filename, event_params, fs):
 
-    if "h5_path" in event:
+    if "h5_path" in event_params:
         with h5py.File(filename, "r") as h5:
-            starts = h5[event["h5_path"]]["start"][:]
-            durations = h5[event["h5_path"]]["duration"][:]
+            starts = h5[event_params["h5_path"]]["start"][:]
+            durations = h5[event_params["h5_path"]]["duration"][:]
             assert len(starts) == len(durations), "Inconsistents event durations and starts"
 
             data = np.zeros((2, len(starts)))
             data[0, :] = starts * fs
             data[1, :] = durations * fs
-    elif "json" in event:
-        filename = filename[:-3] + ".json"
+    elif "json_path" in event_params:
+        directory, filename = os.path.split(filename)
+        filename = os.path.join(directory, event_params["json_path"], filename[:-3] + ".json")
         with open(filename) as f:
             f = json.load(f)
             starts = []
             durations = []
             for event in f["labels"]:
-                starts.append(event["start"])
-                durations.append(event["end"] - event["start"])
+                if event_params["name"] == "apnea" or event_params["name"] == event["value"]:
+                    starts.append(event["start"])
+                    durations.append(event["end"] - event["start"])
 
             assert len(starts) == len(durations), "Inconsistents event durations and starts"
 
             data = np.zeros((2, len(starts)))
             data[0, :] = np.array(starts) * fs
             data[1, :] = np.array(durations) * fs
+    else:
+        raise Exception("No events'path given")
 
     return data

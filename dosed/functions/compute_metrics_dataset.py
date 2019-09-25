@@ -59,12 +59,12 @@ def compute_metrics_dataset(
                     predicted_events,
                     events))
 
-    # If for any event and record the network predicted events, return -1
-    if found_some_events is False:
-        return -1
+        # If for any event and record the network predicted events, return -1
+        if found_some_events is False:
+            return -1
 
-    for metric in metrics.keys():
-        metrics_test[event_num][metric] = np.nanmean(
-            np.array(metrics_test[event_num][metric]))
+        for metric in metrics.keys():
+            metrics_test[event_num][metric] = np.nanmean(
+                np.array(metrics_test[event_num][metric]))
 
     return metrics_test

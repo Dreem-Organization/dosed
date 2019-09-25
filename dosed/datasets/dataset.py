@@ -158,7 +158,7 @@ class EventDataset(Dataset):
                 for label, event in enumerate(events):
                     data = get_events(
                         filename="{}/{}".format(h5_directory, record),
-                        event=event,
+                        event_params=event,
                         fs=self.fs,
                     )
 
@@ -190,15 +190,17 @@ class EventDataset(Dataset):
                 no_events_indexes = set(range(max_index + 1))
                 no_events_indexes = list(no_events_indexes.difference(events_indexes))
                 events_indexes = list(events_indexes)
-
-                self.index_to_record_event.extend([
-                    {
-                        "record": record,
-                        "max_index": max_index,
-                        "events_indexes": events_indexes,
-                        "no_events_indexes": no_events_indexes,
-                    } for _ in range(number_of_events)
-                ])
+                if number_of_events > 0:
+                    self.index_to_record_event.extend([
+                        {
+                            "record": record,
+                            "max_index": max_index,
+                            "events_indexes": events_indexes,
+                            "no_events_indexes": no_events_indexes,
+                        } for _ in range(number_of_events)
+                    ])
+                else:
+                    print("Record : {} has no event".format(record))
 
     def __len__(self):
         return len(self.index_to_record)
