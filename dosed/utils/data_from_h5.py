@@ -94,18 +94,15 @@ def get_h5_data(filename, signals, fs, window):
                 downsampling_t, downsampling_f, padded)
             data_spec[i, :] = normalizer(data_spec[i, :])
 
-        data_dict = {
-            "fs": fs_raw,
-            "window_size": int(window * fs_raw),
-            "signal_size": signal_size,
-        }
+        window_size = int(window * fs_raw)
 
+        data_dict = dict()
         if len(signals_raw) > 0:
             data_dict["raw"] = data_raw
         if len(signals_spec) > 0:
             data_dict["spec"] = data_spec
 
-    return data_dict
+    return data_dict, fs_raw, window_size, signal_size
 
 
 def get_h5_events(filename, event_params, fs):

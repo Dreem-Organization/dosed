@@ -114,13 +114,12 @@ class EventDataset(Dataset):
 
         ##################
         # Set all variables of the dataset
-        set_fs = set([d.pop('fs', None) for d in data])
-        assert len(set_fs) == 1, set_fs
-        self.fs = set_fs.pop()
+        data, fs, window_size, signal_size = zip(*data)
+        assert len(set(fs)) == 1, set(fs)
+        self.fs = set(fs).pop()
 
-        set_window_size = set([d.pop('window_size', None) for d in data])
-        assert len(set_window_size) == 1, set_window_size
-        self.window_size = set_window_size.pop()
+        assert len(set(window_size)) == 1, set(window_size)
+        self.window_size = set(window_size).pop()
 
         self.input_shape = dict()
         if self.number_of_channels["raw"] > 0:
@@ -133,8 +132,7 @@ class EventDataset(Dataset):
                                         self.window_size)
         ##################
 
-        for record, data in zip(self.records, data):
-            signal_size = data.pop('signal_size', None)
+        for record, data, signal_size in zip(self.records, data, signal_size):
             number_of_windows = signal_size // self.window_size
 
             self.signals[record] = {
