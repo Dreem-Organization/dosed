@@ -99,10 +99,15 @@ def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
         ratio_positive=1,
     )
 
-    signal, events_data = dataset[0]
+    nb_no_events = 0
+    for signal, events_data in dataset:
+        assert tuple(signal.shape) == (2, 64)
+        if len(events_data) == 0:
+            nb_no_events += 1
+        else:
+            assert events_data.shape[1] == 3
 
-    assert tuple(signal.shape) == (2, 64)
-    assert events_data.shape[1] == 3
+    assert nb_no_events == 0, nb_no_events
 
     number_of_events = sum(
         [len(dataset.get_record_events(record)[0]) for record in records]
@@ -125,9 +130,11 @@ def test_balanced_dataset_ratio_0(h5_directory, signals, events, records):
         ratio_positive=0,
     )
 
-    signal, events_data = dataset[0]
-
-    assert len(events_data) == 0
+    nb_events = 0
+    for signal, events_data in dataset:
+        if len(events_data) != 0:
+            nb_events += 1
+    assert nb_events == 0, nb_events
     assert len(dataset) == 103
 
 
