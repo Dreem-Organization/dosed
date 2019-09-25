@@ -17,7 +17,11 @@ class DOSED2(BaseNet):
         k_max=8,
     ):
         super(DOSED2, self).__init__()
-        self.number_of_channels, self.window_size = input_shape
+
+        assert "raw" in input_shape
+        assert "spec" not in input_shape
+
+        self.number_of_channels, self.window_size = input_shape["raw"]
         self.number_of_classes = number_of_classes + 1  # eventness, real events
 
         detection_parameters["number_of_classes"] = self.number_of_classes
@@ -72,6 +76,7 @@ class DOSED2(BaseNet):
         )
 
     def forward(self, x):
+        x = x["raw"]
         batch = x.size(0)
         x = x.view(batch, 1, self.number_of_channels, -1)
 

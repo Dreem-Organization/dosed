@@ -20,7 +20,11 @@ class DOSED3(BaseNet):
                  fs=256):
 
         super(DOSED3, self).__init__()
-        self.number_of_channels, self.window_size = input_shape
+
+        assert "raw" in input_shape
+        assert "spec" not in input_shape
+
+        self.number_of_channels, self.window_size = input_shape["raw"]
         self.number_of_classes = number_of_classes + 1  # eventless, real events
 
         detection_parameters["number_of_classes"] = self.number_of_classes
@@ -76,6 +80,7 @@ class DOSED3(BaseNet):
         self.print_info_architecture(fs)
 
     def forward(self, x):
+        x = x["raw"]
         batch = x.size(0)
         for block in self.blocks:
             x = block(x)
