@@ -12,14 +12,14 @@ def collate(batch):
     for eeg, events in batch:
         if "raw" in eeg:
             batch_eegs_raw.append(eeg["raw"])
-        if "spec" in eeg:
-            batch_eegs_spec.append(eeg["spec"])
+        if "spectrogram" in eeg:
+            batch_eegs_spec.append(eeg["spectrogram"])
         batch_events.append(events)
     batch_eegs = {}
     if len(batch_eegs_raw) > 0:
         batch_eegs["raw"] = torch.stack(batch_eegs_raw, 0)
     if len(batch_eegs_spec) > 0:
-        batch_eegs["spec"] = torch.stack(batch_eegs_spec, 0)
+        batch_eegs["spectrogram"] = torch.stack(batch_eegs_spec, 0)
 
     return batch_eegs, batch_events
 

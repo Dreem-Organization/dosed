@@ -43,8 +43,8 @@ class DOSED4(BaseNet):
         self.spec_channels = 0
         if "raw" in input_shape.keys():
             self.raw_channels, self.window_size = input_shape["raw"]
-        if "spec" in input_shape.keys():
-            self.spec_channels, self.fsz, self.window_size = input_shape["spec"]
+        if "spectrogram" in input_shape.keys():
+            self.spec_channels, self.fsz, self.window_size = input_shape["spectrogram"]
         self.number_of_classes = number_of_classes + 1  # eventless, real events
 
         detection_parameters["number_of_classes"] = self.number_of_classes
@@ -157,7 +157,7 @@ class DOSED4(BaseNet):
 
         if self.spec_channels > 0:
             if self.raw_channels > 0:
-                x_spectro = x["spec"]
+                x_spectro = x["spectrogram"]
                 x_raw = x["raw"]
                 for block in self.blocks_spectro:
                     x_spectro = block(x_spectro)
@@ -167,7 +167,7 @@ class DOSED4(BaseNet):
                 x_spectro = x_spectro.view(bsz, csz, fsz * tsz)
                 x = torch.cat((x_spectro, x_raw), 2)
             else:
-                x = x["spec"]
+                x = x["spectrogram"]
                 for block in self.blocks_spectro:
                     x = block(x)
                 bsz, csz, fsz, tsz = x.shape

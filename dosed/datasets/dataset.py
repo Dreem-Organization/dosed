@@ -92,7 +92,7 @@ class EventDataset(Dataset):
             get_events = memory.cache(get_h5_events)
 
         self.number_of_channels = {
-            "spec": len([signal for signal in signals if "spectrogram" in signal]),
+            "spectrogram": len([signal for signal in signals if "spectrogram" in signal]),
             "raw": len([signal for signal in signals if "spectrogram" not in signal]),
         }
         # used in network architecture
@@ -126,15 +126,14 @@ class EventDataset(Dataset):
             self.input_shape["raw"] = (self.number_of_channels["raw"],
                                        self.window_size)
 
-        if self.number_of_channels["spec"] > 0:
-            self.input_shape["spec"] = (self.number_of_channels["spec"],
-                                        data[0]["spec"].shape[-2],
-                                        self.window_size)
+        if self.number_of_channels["spectrogram"] > 0:
+            self.input_shape["spectrogram"] = (self.number_of_channels["spectrogram"],
+                                               data[0]["spectrogram"].shape[-2],
+                                               self.window_size)
         ##################
 
         for record, data, signal_size in zip(self.records, data, signal_size):
             number_of_windows = signal_size // self.window_size
-
             self.signals[record] = {
                 "data": data,
                 "size": signal_size,

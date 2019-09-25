@@ -45,8 +45,8 @@ def signals():
             'spectrogram': {
                 "nperseg": 8,
                 "nfft": 8,
-                "downsampling_t": 1,
-                "downsampling_f": 1,
+                "temporal_downsampling": 1,
+                "frequential_downsampling": 1,
                 "padded": True,
             },
         }
@@ -88,17 +88,17 @@ def test_dataset(signals, events, h5_directory, records):
     signals, events = dataset[0]
 
     for signal_type, signal in signals.items():
-        assert signal_type in ["raw", "spec"]
+        assert signal_type in ["raw", "spectrogram"]
         if signal_type == "raw":
             assert tuple(signals[signal_type].shape) == (1, int(window * dataset.fs))
-        elif signal_type == "spec":
+        elif signal_type == "spectrogram":
             assert tuple(signals[signal_type].shape) == (1, 5, int(window * dataset.fs))
 
-    if "spec" not in signals.keys():
+    if "spectrogram" not in signals.keys():
         assert signals["raw"][0][6].tolist() == -0.11056432873010635
     else:
         assert signals["raw"][0][6].tolist() == -0.042607735842466354
-        assert signals["spec"][0][4][6].tolist() == 0.0006360001862049103
+        assert signals["spectrogram"][0][4][6].tolist() == 0.0006360001862049103
 
 
 def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
@@ -118,10 +118,10 @@ def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
     for i in range(len(dataset)):
         signals, events_data = dataset[i]
         for signal_type, signal in signals.items():
-            assert signal_type in ["raw", "spec"]
+            assert signal_type in ["raw", "spectrogram"]
             if signal_type == "raw":
                 assert tuple(signals[signal_type].shape) == (1, int(dataset.fs))
-            elif signal_type == "spec":
+            elif signal_type == "spectrogram":
                 assert tuple(signals[signal_type].shape) == (1, 5, int(dataset.fs))
 
         if len(events_data) != 0:

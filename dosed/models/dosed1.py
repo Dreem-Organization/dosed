@@ -25,7 +25,7 @@ class DOSED1(BaseNet):
         super(DOSED1, self).__init__()
 
         assert "raw" in input_shape
-        assert "spec" not in input_shape
+        assert "spectrogram" not in input_shape
 
         self.number_of_channels, self.window_size = input_shape["raw"]
         self.number_of_classes = number_of_classes + 1  # eventness, real events

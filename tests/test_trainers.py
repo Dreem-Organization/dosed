@@ -35,8 +35,8 @@ def test_full_training():
             'spectrogram': {
                 "nperseg": 8,
                 "nfft": 8,
-                "downsampling_t": 1,
-                "downsampling_f": 1,
+                "temporal_downsampling": 1,
+                "frequential_downsampling": 1,
                 "padded": True,
             },
         }

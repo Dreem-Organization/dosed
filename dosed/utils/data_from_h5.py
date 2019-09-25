@@ -12,7 +12,7 @@ from ..preprocessing import normalizers, filters, spectrogram, get_interpolator
 def get_h5_data(filename, signals, fs, window):
 
     signals_raw = []
-    signals_spec = []
+    signals_spectrogram = []
 
     fs_raw = fs
     set_tsz = set()
@@ -20,26 +20,26 @@ def get_h5_data(filename, signals, fs, window):
 
     for i, signal in enumerate(signals):
         if "spectrogram" in signal.keys():
-            signals_spec.append(i)
+            signals_spectrogram.append(i)
 
             nperseg = signal["spectrogram"]["nperseg"]
             nfft = signal["spectrogram"]["nfft"]
-            downsampling_t = signal["spectrogram"]["downsampling_t"]
-            downsampling_f = signal["spectrogram"]["downsampling_f"]
+            temporal_downsampling = signal["spectrogram"]["temporal_downsampling"]
+            frequential_downsampling = signal["spectrogram"]["frequential_downsampling"]
             padded = signal["spectrogram"]["padded"]
 
             # frequency size
             fsz = nfft // 2 + 1
-            fsz = int(np.ceil(fsz / downsampling_f))
+            fsz = int(np.ceil(fsz / frequential_downsampling))
             set_fsz.add(fsz)
             # time size
             tsz = np.ceil((window * fs - int(not padded) * (nperseg - 1) - 1) / (nperseg // 2)) + 1
-            tsz = int(np.ceil(tsz / downsampling_t))
+            tsz = int(np.ceil(tsz / temporal_downsampling))
             set_tsz.add(tsz)
         else:
             signals_raw.append(i)
 
-    if len(signals_spec) > 0:
+    if len(signals_spectrogram) > 0:
         assert len(set_tsz) == 1, set_tsz
         assert len(set_fsz) == 1, set_fsz
         tsz = set_tsz.pop()
@@ -50,15 +50,16 @@ def get_h5_data(filename, signals, fs, window):
         time_window = min(set([h5[signal["h5_path"]].size / signal['fs'] for signal in signals]))
         signal_size = None
 
-        if len(signals_spec) > 0:
+        if len(signals_spectrogram) > 0:
             # /!\ Force resampling frequency to be the same as the spectrogram's one
-            nb_windows_spec = int(time_window * signals[signals_spec[0]]["fs"]) // (window * fs)
-            signal_size = tsz * nb_windows_spec
-            data_spec = np.zeros((len(signals_spec),
-                                  fsz,
-                                  signal_size))
-            fs_raw = tsz / window  # tsz * nb_windows_spec / time_window
-            t_target_spec = np.cumsum([1 / fs] * int(time_window * fs))
+            nb_windows_spectrogram = int(
+                time_window * signals[signals_spectrogram[0]]["fs"]) // (window * fs)
+            signal_size = tsz * nb_windows_spectrogram
+            data_spectrogram = np.zeros((len(signals_spectrogram),
+                                         fsz,
+                                         signal_size))
+            fs_raw = tsz / window  # tsz * nb_windows_spectrogram / time_window
+            t_target_spectrogram = np.cumsum([1 / fs] * int(time_window * fs))
 
         if len(signals_raw) > 0:
             if signal_size is None:
@@ -82,25 +83,25 @@ def get_h5_data(filename, signals, fs, window):
             data_raw[i, :] = normalizer(data_raw[i, :])
 
         # Preprocess spectrograms
-        for i, signal in enumerate([signals[k] for k in signals_spec]):
+        for i, signal in enumerate([signals[k] for k in signals_spectrogram]):
             interpolator = get_interpolator(
-                signal["fs"], fs, h5[signal["h5_path"]].size, t_target_spec)
+                signal["fs"], fs, h5[signal["h5_path"]].size, t_target_spectrogram)
             normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
 
-            data_spec[i, :] = spectrogram(
+            data_spectrogram[i, :] = spectrogram(
                 interpolator(h5[signal["h5_path"]][:]),
                 fs,
                 window, nperseg, nfft,
-                downsampling_t, downsampling_f, padded)
-            data_spec[i, :] = normalizer(data_spec[i, :])
+                temporal_downsampling, frequential_downsampling, padded)
+            data_spectrogram[i, :] = normalizer(data_spectrogram[i, :])
 
         window_size = int(window * fs_raw)
 
         data_dict = dict()
         if len(signals_raw) > 0:
             data_dict["raw"] = data_raw
-        if len(signals_spec) > 0:
-            data_dict["spec"] = data_spec
+        if len(signals_spectrogram) > 0:
+            data_dict["spectrogram"] = data_spectrogram
 
     return data_dict, fs_raw, window_size, signal_size
 
