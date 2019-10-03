@@ -71,7 +71,8 @@ class BaseNet(nn.Module):
 
         # Set network prediction parameters
         self.detector.classification_threshold = threshold
-        window_size = inference_dataset.window_size
+        referential_block = inference_dataset.referential_block
+        window_size = inference_dataset.window_sizes[referential_block]
         window = inference_dataset.window
         overlap = window * overlap_factor
 
@@ -80,14 +81,13 @@ class BaseNet(nn.Module):
         for record in inference_dataset.records:
             predictions[record] = []
             result = np.zeros((self.number_of_classes - 1,
-                               inference_dataset.signals[record]["size"]))
+                               inference_dataset.signals[record]["size"][referential_block]))
             for signals, times in inference_dataset.get_record_batch(
                     record,
                     batch_size=int(batch_size),
                     stride=overlap):
                 x = {signal_type: signal.to(self.device) for signal_type, signal in signals.items()}
                 batch_predictions = self.predict(x)
-
                 for events, time in zip(batch_predictions, times):
                     for event in events:
                         start = int(round(event[0] * window_size + time[0]))

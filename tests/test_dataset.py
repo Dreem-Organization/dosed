@@ -21,35 +21,38 @@ def records(h5_directory):
 @pytest.fixture
 def signals():
     return [
-        {
-            'h5_path': '/eeg_0',
-            'fs': 64,
-            'processing': {
-                "type": "clip_and_normalize",
-                "args": {
-                        "min_value": -150,
-                    "max_value": 150,
-                }
-            }
-        },
-        {
-            'h5_path': '/eeg_1',
-            'fs': 64,
-            'processing': {
-                "type": "clip_and_normalize",
-                "args": {
-                        "min_value": -150,
-                    "max_value": 150,
-                }
-            },
-            'spectrogram': {
-                "nperseg": 8,
-                "nfft": 8,
-                "temporal_downsampling": 1,
-                "frequential_downsampling": 1,
-                "padded": True,
-            },
-        }
+        {'name': 'eeg_raw',
+         'signals': [{'h5_paths': ['/eeg_0'],
+                      'fs': 64}],
+         'fs': 32,
+         'preprocessing': [
+             {"name": "clip_and_normalize",
+                 "args": {
+                     "min_value": -150,
+                     "max_value": 150,
+                 }}
+         ]
+         },
+        {'name': 'eeg_spectrogram',
+         'signals': [{'h5_paths': ['/eeg_1'],
+                      'fs': 64}],
+         'fs': 64,
+         'preprocessing': [
+             {'name': 'spectrogram',
+                 'args': {
+                     "nperseg": 8,
+                     "nfft": 8,
+                     "temporal_downsampling": 1,
+                     "frequential_downsampling": 1,
+                     "padded": True,
+                 }},
+             {"name": "clip_and_normalize",
+                 "args": {
+                     "min_value": -150,
+                     "max_value": 150,
+                 }},
+         ]
+         }
     ]
 
 
@@ -78,7 +81,6 @@ def test_dataset(signals, events, h5_directory, records):
         events=events,
         records=sorted(records),
         window=window,
-        fs=64,
         minimum_overlap=0.5,
         transformations=lambda x: x
     )
@@ -88,17 +90,18 @@ def test_dataset(signals, events, h5_directory, records):
     signals, events = dataset[0]
 
     for signal_type, signal in signals.items():
-        assert signal_type in ["raw", "spectrogram"]
-        if signal_type == "raw":
-            assert tuple(signals[signal_type].shape) == (1, int(window * dataset.fs))
-        elif signal_type == "spectrogram":
-            assert tuple(signals[signal_type].shape) == (1, 5, int(window * dataset.fs))
+        assert signal_type in ["eeg_raw", "eeg_spectrogram"]
+        fs = dataset.fs[signal_type]
+        if signal_type == "eeg_raw":
+            assert tuple(signals[signal_type].shape) == (1, int(window * fs))
+        elif signal_type == "eeg_spectrogram":
+            assert tuple(signals[signal_type].shape) == (1, 5, int(window * fs))
 
-    if "spectrogram" not in signals.keys():
-        assert signals["raw"][0][6].tolist() == -0.11056432873010635
+    if "eeg_spectrogram" not in signals.keys():
+        assert signals["eeg_raw"][0][6].tolist() == -0.11056432873010635
     else:
-        assert signals["raw"][0][6].tolist() == -0.042607735842466354
-        assert signals["spectrogram"][0][4][6].tolist() == 0.0006360001862049103
+        assert signals["eeg_raw"][0][6].tolist() == -0.05878538265824318
+        assert signals["eeg_spectrogram"][0][4][6].tolist() == 0.0006360001862049103
 
 
 def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
@@ -108,7 +111,6 @@ def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
         signals=signals,
         events=events,
         window=1,
-        fs=64,
         records=None,
         minimum_overlap=0.5,
         transformations=lambda x: x,
@@ -118,11 +120,12 @@ def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
     for i in range(len(dataset)):
         signals, events_data = dataset[i]
         for signal_type, signal in signals.items():
-            assert signal_type in ["raw", "spectrogram"]
-            if signal_type == "raw":
-                assert tuple(signals[signal_type].shape) == (1, int(dataset.fs))
-            elif signal_type == "spectrogram":
-                assert tuple(signals[signal_type].shape) == (1, 5, int(dataset.fs))
+            assert signal_type in ["eeg_raw", "eeg_spectrogram"]
+            fs = dataset.fs[signal_type]
+            if signal_type == "eeg_raw":
+                assert tuple(signals[signal_type].shape) == (1, int(fs))
+            elif signal_type == "eeg_spectrogram":
+                assert tuple(signals[signal_type].shape) == (1, 5, int(fs))
 
         if len(events_data) != 0:
             assert events_data.shape[1] == 3
@@ -143,7 +146,6 @@ def test_balanced_dataset_ratio_0(h5_directory, signals, events, records):
         signals=signals,
         events=events,
         window=1,
-        fs=64,
         records=None,
         minimum_overlap=0.5,
         transformations=lambda x: x,
@@ -159,10 +161,10 @@ def test_balanced_dataset_ratio_0(h5_directory, signals, events, records):
     assert nb_without_event == len(dataset), nb_without_event / len(dataset)
 
 
-def mock_clip_and_normalize(min_value, max_value):
+def mock_clip_and_normalize(fs, signal_size, window, input_shape, min_value, max_value):
     def clipper(x, min_value=min_value, max_value=max_value):
         time.sleep(1)
-        return x
+        return x, fs, signal_size, input_shape
     return clipper
 
 
@@ -171,7 +173,7 @@ normalizer = {
 }
 
 
-@patch("dosed.utils.data_from_h5.normalizers", normalizer)
+@patch.dict("dosed.utils.data_from_h5.dict_filters", normalizer)
 def test_parallel_is_faster(h5_directory, signals, events, records, cache_directory):
 
     dataset_parameters = {
@@ -179,7 +181,6 @@ def test_parallel_is_faster(h5_directory, signals, events, records, cache_direct
         "signals": signals,
         "events": events,
         "window": 1,
-        "fs": 64,
         "records": None,
         "minimum_overlap": 0.5,
         "ratio_positive": 0.5,
@@ -211,7 +212,6 @@ def test_cache_is_faster(h5_directory, signals, events, records, cache_directory
         "signals": signals,
         "events": events,
         "window": 1,
-        "fs": 64,
         "records": None,
         "minimum_overlap": 0.5,
         "ratio_positive": 0.5,
@@ -241,7 +241,6 @@ def test_cache_no_cache(h5_directory, signals, events, records, cache_directory)
         "signals": signals,
         "events": events,
         "window": 1,
-        "fs": 64,
         "records": None,
         "minimum_overlap": 0.5,
         "ratio_positive": 0.5,

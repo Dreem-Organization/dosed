@@ -15,7 +15,7 @@ class DOSED1(BaseNet):
 
     def __init__(
         self,
-        input_shape,
+        input_shapes,
         number_of_classes,
         detection_parameters,
         duration=256,
@@ -24,10 +24,12 @@ class DOSED1(BaseNet):
     ):
         super(DOSED1, self).__init__()
 
-        assert "raw" in input_shape
-        assert "spectrogram" not in input_shape
+        assert len(input_shapes) == 1
+        self.block_name = list(input_shapes.keys())[0]
 
-        self.number_of_channels, self.window_size = input_shape["raw"]
+        assert len(input_shapes[self.block_name]) == 2
+
+        self.number_of_channels, self.window_size = input_shapes[self.block_name]
         self.number_of_classes = number_of_classes + 1  # eventness, real events
 
         detection_parameters["number_of_classes"] = self.number_of_classes
@@ -90,7 +92,7 @@ class DOSED1(BaseNet):
         )
 
     def forward(self, x):
-        x = x["raw"]
+        x = x[self.block_name]
         batch = x.size(0)
         x = x.view(batch, 1, self.number_of_channels, -1)
 

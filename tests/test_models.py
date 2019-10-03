@@ -20,7 +20,7 @@ def test_dosed1():
     overlap_default_event = 2
 
     net = DOSED1(
-        input_shape={"raw": (number_of_channels, window_duration * fs)},
+        input_shapes={"raw": (number_of_channels, window_duration * fs)},
         number_of_classes=number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
@@ -50,7 +50,7 @@ def test_dosed2():
     default_event_sizes = [1 * fs, 2 * fs]
 
     net = DOSED2(
-        input_shape={"raw": (number_of_channels, window_duration * fs)},
+        input_shapes={"raw": (number_of_channels, window_duration * fs)},
         number_of_classes=number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
@@ -82,7 +82,7 @@ def test_dosed3():
     default_event_sizes = [1 * fs, 2 * fs]
 
     net = DOSED3(
-        input_shape={"raw": (number_of_channels, window_duration * fs)},
+        input_shapes={"raw": (number_of_channels, window_duration * fs)},
         number_of_classes=number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
@@ -113,7 +113,7 @@ def test_dosed4():
                            spectrogram_fsize, window_duration * fs),
     }
 
-    input_shape = {
+    input_shapes = {
         "raw": (number_of_raw_channels, window_duration * fs),
         "spec": (number_of_spec_channels, spectrogram_fsize, window_duration * fs),
     }
@@ -125,7 +125,7 @@ def test_dosed4():
     default_event_sizes = [1 * fs, 2 * fs]
 
     net = DOSED4(
-        input_shape=input_shape,
+        input_shapes=input_shapes,
         number_of_classes=number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
@@ -155,13 +155,13 @@ def test_save_load():
         "spec": torch.rand(batch_size, number_of_spec_channels,
                            spectrogram_fsize, window_duration * fs),
     }
-    input_shape = {
+    input_shapes = {
         "raw": [number_of_raw_channels, window_duration * fs],
         "spec": [number_of_spec_channels, spectrogram_fsize, window_duration * fs],
     }
 
     net_parameters = {
-        "input_shape": input_shape,
+        "input_shapes": input_shapes,
         "number_of_classes": 3,
         "detection_parameters": {
             "overlap_non_maximum_suppression": 0.5,
@@ -191,7 +191,7 @@ def test_save_load():
 
 def test_nelement():
     net_parameters = {
-        "input_shape": {"raw": [1, 20]},
+        "input_shapes": {"raw": [1, 20]},
         "number_of_classes": 3,
         "detection_parameters": {
             "overlap_non_maximum_suppression": 0.5,

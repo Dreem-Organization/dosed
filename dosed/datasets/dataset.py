@@ -51,7 +51,6 @@ class EventDataset(Dataset):
                  h5_directory,
                  signals,
                  window,
-                 fs,
                  events=None,
                  records=None,
                  n_jobs=1,
@@ -76,9 +75,6 @@ class EventDataset(Dataset):
             self.records = [x for x in os.listdir(h5_directory) if x != ".cache"]
 
         ###########################
-        # Checks on H5
-        self.fs = fs
-
         # check event names
         if events:
             assert len(set([event["name"] for event in events])) == len(events)
@@ -91,10 +87,6 @@ class EventDataset(Dataset):
             get_data = memory.cache(get_h5_data)
             get_events = memory.cache(get_h5_events)
 
-        self.number_of_channels = {
-            "spectrogram": len([signal for signal in signals if "spectrogram" in signal]),
-            "raw": len([signal for signal in signals if "spectrogram" not in signal]),
-        }
         # used in network architecture
         self.minimum_overlap = minimum_overlap  # for events on the edge of window_size
 
@@ -108,41 +100,51 @@ class EventDataset(Dataset):
         data = Parallel(n_jobs=n_jobs, prefer="threads")(delayed(get_data)(
             filename="{}/{}".format(h5_directory, record),
             signals=signals,
-            fs=fs,
             window=self.window
         ) for record in tqdm.tqdm(self.records))
 
         ##################
         # Set all variables of the dataset
-        data, fs, window_size, signal_size = zip(*data)
-        assert len(set(fs)) == 1, set(fs)
-        self.fs = set(fs).pop()
+        data_signals, data_properties = zip(*data)
 
-        assert len(set(window_size)) == 1, set(window_size)
-        self.window_size = set(window_size).pop()
+        self.blocks_names = list(data_signals[0].keys())
+        self.referential_block = sorted(self.blocks_names)[0]
 
-        self.input_shape = dict()
-        if self.number_of_channels["raw"] > 0:
-            self.input_shape["raw"] = (self.number_of_channels["raw"],
-                                       self.window_size)
+        fs = {block_name: set([properties[block_name]["fs"] for properties in data_properties])
+              for block_name in self.blocks_names}
 
-        if self.number_of_channels["spectrogram"] > 0:
-            self.input_shape["spectrogram"] = (self.number_of_channels["spectrogram"],
-                                               data[0]["spectrogram"].shape[-2],
-                                               self.window_size)
+        assert np.all([len(fs_block) == 1 for fs_block in fs.values()])
+        self.fs = {block_name: fs_block.pop() for block_name, fs_block in fs.items()}
+
+        signal_sizes = [{block_name: properties["signal_size"]
+                         for block_name, properties in properties_dict.items()}
+                        for properties_dict in data_properties]
+
+        input_shapes = {block_name: set([properties[block_name]["input_shape"]
+                                         for properties in data_properties])
+                        for block_name in self.blocks_names}
+
+        assert np.all([len(input_shape_block) == 1 for input_shape_block in input_shapes.values()])
+        self.input_shapes = {block_name: input_shape_block.pop()
+                             for block_name, input_shape_block in input_shapes.items()}
+
+        self.window_sizes = {block_name: int(window * fs) for block_name, fs in self.fs.items()}
+
         ##################
 
-        for record, data, signal_size in zip(self.records, data, signal_size):
-            number_of_windows = signal_size // self.window_size
+        for record, data, signal_sizes in zip(self.records, data_signals, signal_sizes):
+            number_of_windows = min(set([signal_sizes[block_name] // self.window_sizes[block_name]
+                                         for block_name in self.blocks_names]))
+
             self.signals[record] = {
                 "data": data,
-                "size": signal_size,
+                "size": signal_sizes,
             }
 
             self.index_to_record.extend([
                 {
                     "record": record,
-                    "index": x * self.window_size
+                    "index": x
                 } for x in range(number_of_windows)
             ])
 
@@ -150,13 +152,22 @@ class EventDataset(Dataset):
                 self.events[record] = {}
                 number_of_events = 0
                 events_indexes = set()
-                max_index = signal_size - self.window_size
+
+                max_index_block = min(sorted({block: signal_sizes[block] / self.fs[block]
+                                              for block in self.blocks_names}.items()),
+                                      key=lambda x: x[1])[0]
+                referential_window_size = self.window_sizes[self.referential_block]
+                referential_fs = self.fs[self.referential_block]
+
+                max_index = signal_sizes[max_index_block] - self.window_sizes[max_index_block]
+                max_index = int(max_index * referential_fs / self.fs[max_index_block])
 
                 for label, event in enumerate(events):
+
                     data = get_events(
                         filename="{}/{}".format(h5_directory, record),
                         event_params=event,
-                        fs=self.fs,
+                        fs=referential_fs,
                     )
 
                     number_of_events += data.shape[-1]
@@ -166,27 +177,32 @@ class EventDataset(Dataset):
                     }
 
                     for start, duration in zip(*data):
-                        if self.window_size / duration > self.minimum_overlap:
+                        if referential_window_size / duration > self.minimum_overlap:
                             stop = start + duration
                             duration_overlap = duration * self.minimum_overlap
                             start_valid_index = int(round(
-                                max(0, start + duration_overlap - self.window_size + 1)))
+                                max(0, start + duration_overlap - referential_window_size + 1)))
                             end_valid_index = int(round(
                                 min(max_index + 1, stop - duration_overlap)))
 
                             indexes = list(range(start_valid_index, end_valid_index))
                             # Check borders
                             if self.get_valid_events_index(start_valid_index - 1,
-                                                           [start], [duration]):
+                                                           [start], [duration],
+                                                           referential_window_size):
                                 indexes.append(start_valid_index - 1)
                             if self.get_valid_events_index(end_valid_index + 1,
-                                                           [start], [duration]):
+                                                           [start], [duration],
+                                                           referential_window_size):
                                 indexes.append(end_valid_index + 1)
                             events_indexes.update(indexes)
 
                 no_events_indexes = set(range(max_index + 1))
-                no_events_indexes = list(no_events_indexes.difference(events_indexes))
-                events_indexes = list(events_indexes)
+                no_events_indexes = np.array(list(no_events_indexes.difference(events_indexes)))
+                events_indexes = np.array(list(events_indexes))
+                no_events_indexes = no_events_indexes / referential_window_size
+                events_indexes = events_indexes / referential_window_size
+
                 if number_of_events > 0:
                     self.index_to_record_event.extend([
                         {
@@ -211,7 +227,7 @@ class EventDataset(Dataset):
                 signals[signal_type] = self.transformations(signal)
         return signals, events
 
-    def get_valid_events_index(self, index, starts, durations):
+    def get_valid_events_index(self, index, starts, durations, window_size):
         """Return the events' indexes that have enough overlap with the given time index
            ex: index = 155
                starts =   [10 140 150 165 2000]
@@ -225,8 +241,8 @@ class EventDataset(Dataset):
         starts = np.array(starts)
         durations = np.array(durations)
 
-        starts_relative = (starts - index) / self.window_size
-        durations_relative = durations / self.window_size
+        starts_relative = (starts - index) / window_size
+        durations_relative = durations / window_size
         stops_relative = starts_relative + durations_relative
 
         # Find valid start or stop
@@ -258,7 +274,7 @@ class EventDataset(Dataset):
                         > self.minimum_overlap:
                     events_indexes.append(valid_index)
             elif valid_index in valid_inside_index:
-                if self.window_size / durations[valid_index] > self.minimum_overlap:
+                if window_size / durations[valid_index] > self.minimum_overlap:
                     events_indexes.append(valid_index)
 
         return events_indexes
@@ -285,64 +301,81 @@ class EventDataset(Dataset):
         # stride = overlap_size
         # batch_size = batch
 
-        stride = int((stride if stride is not None else self.window) * self.fs)
-        batch_overlap_size = stride * batch_size  # stride at a batch level
-        read_size = (batch_size - 1) * stride + self.window_size
-        signal_size = self.signals[record]["size"]
-        t = np.arange(signal_size)
-        number_of_batches_in_record = (signal_size - read_size) // batch_overlap_size + 1
+        strides = {block_name: int((stride if stride is not None else self.window) * fs)
+                   for block_name, fs in self.fs.items()}
+        # stride at a batch level
+        batch_overlap_size = {block_name: stride * batch_size
+                              for block_name, stride in strides.items()}
+
+        read_size = {block_name: (batch_size - 1) * strides[block_name] + window_size
+                     for block_name, window_size in self.window_sizes.items()}
+
+        signal_sizes = self.signals[record]["size"]
+
+        t = {block_name: np.arange(signal_size) for block_name, signal_size in signal_sizes.items()}
+
+        number_of_batches_in_record = set([
+            (signal_sizes[block_name] - read_size[block_name]) // batch_overlap_size[block_name] + 1
+            for block_name in self.blocks_names]).pop()
 
         for batch in range(number_of_batches_in_record):
-            start = batch_overlap_size * batch
-            stop = batch_overlap_size * batch + read_size
-
             signal_strided = dict()
-            for signal_type, signal in self.signals[record]["data"].items():
+            t_strided = dict()
+
+            for block_name in self.blocks_names:
+                start = batch_overlap_size[block_name] * batch
+                stop = batch_overlap_size[block_name] * batch + read_size[block_name]
+
+                signal = self.signals[record]["data"][block_name]
                 signal = signal[..., start:stop]
-                signal_strided[signal_type] = torch.FloatTensor(
+                signal_strided[block_name] = torch.FloatTensor(
                     as_strided(
                         x=signal,
-                        shape=(batch_size, *signal.shape[:-1], self.window_size),
-                        strides=(signal.strides[-1] * stride, *signal.strides),
+                        shape=(batch_size, *signal.shape[:-1], self.window_sizes[block_name]),
+                        strides=(signal.strides[-1] * strides[block_name], *signal.strides),
                     )
                 )
-            time = t[start:stop]
-            t_strided = as_strided(
-                x=time,
-                shape=(batch_size, self.window_size),
-                strides=(time.strides[0] * stride, time.strides[0]),
-            )
+                time = t[block_name][start:stop]
+                t_strided[block_name] = as_strided(
+                    x=time,
+                    shape=(batch_size, self.window_sizes[block_name]),
+                    strides=(time.strides[0] * strides[block_name], time.strides[0]),
+                )
 
-            yield signal_strided, t_strided
+            yield signal_strided, t_strided[self.referential_block]
 
-        batch_end = (
-            signal_size - number_of_batches_in_record * batch_overlap_size - self.window_size
-        ) // stride + 1
+        batch_end = set([(
+            signal_sizes[block_name] - number_of_batches_in_record *
+            batch_overlap_size[block_name] - self.window_sizes[block_name]
+        ) // strides[block_name] + 1 for block_name in self.blocks_names]).pop()
         if batch_end > 0:
-
-            read_size_end = (batch_end - 1) * stride + self.window_size
-            start = batch_overlap_size * number_of_batches_in_record
-            end = batch_overlap_size * number_of_batches_in_record + read_size_end
-
             signal_strided = dict()
-            for signal_type, signal in self.signals[record]["data"].items():
+            t_strided = dict()
+
+            for block_name in self.blocks_names:
+                read_size_end = (batch_end - 1) * \
+                    strides[block_name] + self.window_sizes[block_name]
+                start = batch_overlap_size[block_name] * number_of_batches_in_record
+                end = batch_overlap_size[block_name] * number_of_batches_in_record + read_size_end
+
+                signal = self.signals[record]["data"][block_name]
                 signal = signal[..., start:end]
-                signal_strided[signal_type] = torch.FloatTensor(
+                signal_strided[block_name] = torch.FloatTensor(
                     as_strided(
                         x=signal,
-                        shape=(batch_end, *signal.shape[:-1], self.window_size),
-                        strides=(signal.strides[-1] * stride, *signal.strides),
+                        shape=(batch_end, *signal.shape[:-1], self.window_sizes[block_name]),
+                        strides=(signal.strides[-1] * strides[block_name], *signal.strides),
                     )
                 )
 
-            time = t[start:end]
-            t_strided = as_strided(
-                x=time,
-                shape=(batch_end, self.window_size),
-                strides=(time.strides[0] * stride, time.strides[0]),
-            )
+                time = t[block_name][start:end]
+                t_strided[block_name] = as_strided(
+                    x=time,
+                    shape=(batch_end, self.window_sizes[block_name]),
+                    strides=(time.strides[0] * strides[block_name], time.strides[0]),
+                )
 
-            yield signal_strided, t_strided
+            yield signal_strided, t_strided[self.referential_block]
 
     def plot(self, idx, channels):
         """Plot events and data from channels for record and index found at
@@ -388,20 +421,27 @@ class EventDataset(Dataset):
         """Return a sample [sata, events] from a record at a particularindex"""
 
         signal_data = dict()
-        for signal_type, signal in self.signals[record]["data"].items():
-            signal_data[signal_type] = torch.FloatTensor(
-                signal[..., index: index + self.window_size])
+        for block_name, signal in self.signals[record]["data"].items():
+            block_index = int(index * self.window_sizes[block_name])
+            signal_data[block_name] = torch.FloatTensor(
+                signal[..., block_index: block_index + self.window_sizes[block_name]])
         events_data = []
 
         for event_name, event in self.events[record].items():
             starts, durations = event["data"][0, :], event["data"][1, :]
 
+            referential_window_size = self.window_sizes[self.referential_block]
+            referential_index = int(index * referential_window_size)
+
             # Relative start stop
-            starts_relative = (starts - index) / self.window_size
-            durations_relative = durations / self.window_size
+            starts_relative = (starts - referential_index) / referential_window_size
+            durations_relative = durations / referential_window_size
             stops_relative = starts_relative + durations_relative
 
-            for valid_index in self.get_valid_events_index(index, starts, durations):
+            valid_indexes = self.get_valid_events_index(
+                referential_index, starts, durations, referential_window_size)
+
+            for valid_index in valid_indexes:
                 events_data.append((max(0, float(starts_relative[valid_index])),
                                     min(1, float(stops_relative[valid_index])),
                                     event["label"]))
@@ -420,7 +460,6 @@ class BalancedEventDataset(EventDataset):
                  h5_directory,
                  signals,
                  window,
-                 fs,
                  events=None,
                  records=None,
                  minimum_overlap=0.5,
@@ -434,7 +473,6 @@ class BalancedEventDataset(EventDataset):
             signals=signals,
             events=events,
             window=window,
-            fs=fs,
             records=records,
             minimum_overlap=minimum_overlap,
             transformations=transformations,

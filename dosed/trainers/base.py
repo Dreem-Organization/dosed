@@ -145,6 +145,7 @@ class TrainerBase:
 
         # Get signals and labels
         signals, events = data
+
         x = {signal_type: signal.to(self.net.device) for signal_type, signal in signals.items()}
 
         # Forward

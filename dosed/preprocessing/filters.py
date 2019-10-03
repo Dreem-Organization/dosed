@@ -5,7 +5,8 @@ from dreempy.filter import (
 )
 
 
-def get_bandpass(fs, frequency_band=[0.1, 0.5], order=4, type="butter", **kwargs):
+def get_bandpass(fs, signal_size, window, input_shape,
+                 frequency_band=[0.1, 0.5], order=4, type="butter"):
 
     def filter(signal, fs=fs, frequency_band=frequency_band, order=order, type=type):
 
@@ -19,12 +20,12 @@ def get_bandpass(fs, frequency_band=[0.1, 0.5], order=4, type="butter", **kwargs
             forward_backward=True,
         )
 
-        return signal_filtered
+        return signal_filtered, fs, signal_size, input_shape
 
     return filter
 
 
-def get_lowpass(fs, frequency_cut=0.1, order=4, type="butter", **kwargs):
+def get_lowpass(fs, signal_size, window, input_shape, frequency_cut=0.1, order=4, type="butter"):
 
     def filter(signal, fs=fs, frequency_cut=frequency_cut, order=order, type=type):
 
@@ -38,12 +39,12 @@ def get_lowpass(fs, frequency_cut=0.1, order=4, type="butter", **kwargs):
             forward_backward=True,
         )
 
-        return signal_filtered
+        return signal_filtered, fs, signal_size, input_shape
 
     return filter
 
 
-def get_highpass(fs, frequency_cut=0.5, order=4, type="butter", **kwargs):
+def get_highpass(fs, signal_size, window, input_shape, frequency_cut=0.5, order=4, type="butter"):
 
     def filter(signal, fs=fs, frequency_cut=frequency_cut, order=order, type=type):
 
@@ -57,6 +58,6 @@ def get_highpass(fs, frequency_cut=0.5, order=4, type="butter", **kwargs):
             forward_backward=True,
         )
 
-        return signal_filtered
+        return signal_filtered, fs, signal_size, input_shape
 
     return filter

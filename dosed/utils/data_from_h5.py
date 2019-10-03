@@ -6,104 +6,62 @@ import h5py
 import json
 import os
 
-from ..preprocessing import normalizers, filters, spectrogram, get_interpolator
+from ..preprocessing import dict_filters, get_interpolator
 
 
-def get_h5_data(filename, signals, fs, window):
+def get_h5_data(filename, signals, window):
 
-    signals_raw = []
-    signals_spectrogram = []
-
-    fs_raw = fs
-    set_tsz = set()
-    set_fsz = set()
-
-    for i, signal in enumerate(signals):
-        if "spectrogram" in signal.keys():
-            signals_spectrogram.append(i)
-
-            nperseg = signal["spectrogram"]["nperseg"]
-            nfft = signal["spectrogram"]["nfft"]
-            temporal_downsampling = signal["spectrogram"]["temporal_downsampling"]
-            frequential_downsampling = signal["spectrogram"]["frequential_downsampling"]
-            padded = signal["spectrogram"]["padded"]
-
-            # frequency size
-            fsz = nfft // 2 + 1
-            fsz = int(np.ceil(fsz / frequential_downsampling))
-            set_fsz.add(fsz)
-            # time size
-            tsz = np.ceil((window * fs - int(not padded) * (nperseg - 1) - 1) / (nperseg // 2)) + 1
-            tsz = int(np.ceil(tsz / temporal_downsampling))
-            set_tsz.add(tsz)
+    def recursive_processing(block):
+        if "h5_paths" in block:
+            with h5py.File(filename, "r") as h5:
+                signals = [h5[h5_path] for h5_path in block["h5_paths"]]
+                signal_size = min([signal.size for signal in signals])
+                signals = [signal[:signal_size] for signal in signals]
+                fs = block["fs"]
+                input_shape = (int(window * fs),)
+            return signals, fs, signal_size, input_shape
         else:
-            signals_raw.append(i)
+            signals = []
+            for new_block in block["signals"]:
+                signal, old_fs, signal_size, input_shape = recursive_processing(new_block)
+                signals.append(signal)
 
-    if len(signals_spectrogram) > 0:
-        assert len(set_tsz) == 1, set_tsz
-        assert len(set_fsz) == 1, set_fsz
-        tsz = set_tsz.pop()
-        fsz = set_fsz.pop()
+            signals = np.concatenate(signals, axis=0)
 
-    with h5py.File(filename, "r") as h5:
+            new_fs = block["fs"]
 
-        time_window = min(set([h5[signal["h5_path"]].size / signal['fs'] for signal in signals]))
-        signal_size = None
+            time_window = signal_size / old_fs
 
-        if len(signals_spectrogram) > 0:
-            # /!\ Force resampling frequency to be the same as the spectrogram's one
-            nb_windows_spectrogram = int(
-                time_window * signals[signals_spectrogram[0]]["fs"]) // (window * fs)
-            signal_size = tsz * nb_windows_spectrogram
-            data_spectrogram = np.zeros((len(signals_spectrogram),
-                                         fsz,
-                                         signal_size))
-            fs_raw = tsz / window  # tsz * nb_windows_spectrogram / time_window
-            t_target_spectrogram = np.cumsum([1 / fs] * int(time_window * fs))
+            # Resample the signal to the new frequency
+            target_time = np.cumsum([1 / new_fs] * int(time_window * new_fs))
+            interpolator = get_interpolator(old_fs, new_fs, signal_size, target_time)
+            signals = np.array([interpolator(signal) for signal in signals])
+            # Update the signal size
+            signal_size = int(time_window * new_fs)
+            input_shape = (int(window * new_fs),)
 
-        if len(signals_raw) > 0:
-            if signal_size is None:
-                signal_size = int(time_window * fs_raw)
-            data_raw = np.zeros((len(signals_raw), signal_size))
-            t_target_raw = np.cumsum([1 / fs_raw] * signal_size)
+            for filter_params in block["preprocessing"]:
+                filter = dict_filters[filter_params["name"]](
+                    fs=new_fs,
+                    signal_size=signal_size,
+                    window=window,
+                    input_shape=input_shape,
+                    **filter_params["args"])
 
-        # Preprocess raw signals
-        for i, signal in enumerate([signals[k] for k in signals_raw]):
-            interpolator = get_interpolator(
-                signal["fs"], fs_raw, h5[signal["h5_path"]].size, t_target_raw)
-            normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
+                signals, new_fs, signal_size, input_shape = filter(signals)
 
-            if "filter" in signal.keys():
-                filter = filters[signal['filter']['type']](fs=fs_raw, **signal['filter']['args'])
+            return signals, new_fs, signal_size, input_shape
 
-                data_raw[i, :] = interpolator(filter(h5[signal["h5_path"]][:]))
-            else:
-                data_raw[i, :] = interpolator(h5[signal["h5_path"]][:])
+    signals_data = dict()
+    signals_properties = dict()
+    for block in signals:
+        signals, fs, signal_size, input_shape = recursive_processing(block)
+        input_shape = (len(signals),) + input_shape
+        signals_data[block["name"]] = signals
+        signals_properties[block["name"]] = {
+            "fs": fs, "signal_size": signal_size, "input_shape": input_shape}
 
-            data_raw[i, :] = normalizer(data_raw[i, :])
-
-        # Preprocess spectrograms
-        for i, signal in enumerate([signals[k] for k in signals_spectrogram]):
-            interpolator = get_interpolator(
-                signal["fs"], fs, h5[signal["h5_path"]].size, t_target_spectrogram)
-            normalizer = normalizers[signal['processing']["type"]](**signal['processing']['args'])
-
-            data_spectrogram[i, :] = spectrogram(
-                interpolator(h5[signal["h5_path"]][:]),
-                fs,
-                window, nperseg, nfft,
-                temporal_downsampling, frequential_downsampling, padded)
-            data_spectrogram[i, :] = normalizer(data_spectrogram[i, :])
-
-        window_size = int(window * fs_raw)
-
-        data_dict = dict()
-        if len(signals_raw) > 0:
-            data_dict["raw"] = data_raw
-        if len(signals_spectrogram) > 0:
-            data_dict["spectrogram"] = data_spectrogram
-
-    return data_dict, fs_raw, window_size, signal_size
+    return signals_data, signals_properties
 
 
 def get_h5_events(filename, event_params, fs):

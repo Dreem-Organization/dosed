@@ -10,7 +10,7 @@ from .base import BaseNet, get_overlerapping_default_events
 class DOSED3(BaseNet):
 
     def __init__(self,
-                 input_shape,
+                 input_shapes,
                  number_of_classes,
                  detection_parameters,
                  default_event_sizes,
@@ -21,10 +21,12 @@ class DOSED3(BaseNet):
 
         super(DOSED3, self).__init__()
 
-        assert "raw" in input_shape
-        assert "spectrogram" not in input_shape
+        assert len(input_shapes) == 1
+        self.block_name = list(input_shapes.keys())[0]
 
-        self.number_of_channels, self.window_size = input_shape["raw"]
+        assert len(input_shapes[self.block_name]) == 2
+
+        self.number_of_channels, self.window_size = input_shapes[self.block_name]
         self.number_of_classes = number_of_classes + 1  # eventless, real events
 
         detection_parameters["number_of_classes"] = self.number_of_classes
@@ -80,7 +82,7 @@ class DOSED3(BaseNet):
         self.print_info_architecture(fs)
 
     def forward(self, x):
-        x = x["raw"]
+        x = x[self.block_name]
         batch = x.size(0)
         for block in self.blocks:
             x = block(x)

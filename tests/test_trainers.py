@@ -11,35 +11,38 @@ def test_full_training():
     window = 1  # in seconds
 
     signals = [
-        {
-            'h5_path': '/eeg_0',
-            'fs': 64,
-            'processing': {
-                "type": "clip_and_normalize",
-                "args": {
-                        "min_value": -150,
-                    "max_value": 150,
-                }
-            }
-        },
-        {
-            'h5_path': '/eeg_1',
-            'fs': 64,
-            'processing': {
-                "type": "clip_and_normalize",
-                "args": {
-                        "min_value": -150,
-                    "max_value": 150,
-                }
-            },
-            'spectrogram': {
-                "nperseg": 8,
-                "nfft": 8,
-                "temporal_downsampling": 1,
-                "frequential_downsampling": 1,
-                "padded": True,
-            },
-        }
+        {'name': 'eeg_raw',
+         'signals': [{'h5_paths': ['/eeg_0'],
+                      'fs': 64}],
+         'fs': 32,
+         'preprocessing': [
+             {"name": "clip_and_normalize",
+                 "args": {
+                     "min_value": -150,
+                     "max_value": 150,
+                 }}
+         ]
+         },
+        {'name': 'eeg_spectrogram',
+         'signals': [{'h5_paths': ['/eeg_1'],
+                      'fs': 64}],
+         'fs': 64,
+         'preprocessing': [
+             {'name': 'spectrogram',
+                 'args': {
+                     "nperseg": 8,
+                     "nfft": 8,
+                     "temporal_downsampling": 1,
+                     "frequential_downsampling": 1,
+                     "padded": True,
+                 }},
+             {"name": "clip_and_normalize",
+                 "args": {
+                     "min_value": -150,
+                     "max_value": 150,
+                 }},
+         ]
+         }
     ]
 
     events = [
@@ -56,7 +59,6 @@ def test_full_training():
         signals=signals,
         events=events,
         window=window,
-        fs=64,
         minimum_overlap=0.5,
         transformations=lambda x: x,
         ratio_positive=0.5,
