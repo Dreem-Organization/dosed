@@ -64,17 +64,13 @@ def get_h5_data(filename, signals, window):
     return signals_data, signals_properties
 
 
-def get_h5_events(filename, event_params, fs):
+def get_h5_events(filename, event_params):
 
     if "h5_path" in event_params:
         with h5py.File(filename, "r") as h5:
             starts = h5[event_params["h5_path"]]["start"][:]
             durations = h5[event_params["h5_path"]]["duration"][:]
-            assert len(starts) == len(durations), "Inconsistents event durations and starts"
 
-            data = np.zeros((2, len(starts)))
-            data[0, :] = starts * fs
-            data[1, :] = durations * fs
     elif "json_path" in event_params:
         directory, filename = os.path.split(filename)
         filename = os.path.join(directory, event_params["json_path"], filename[:-3] + ".json")
@@ -87,12 +83,13 @@ def get_h5_events(filename, event_params, fs):
                     starts.append(event["start"])
                     durations.append(event["end"] - event["start"])
 
-            assert len(starts) == len(durations), "Inconsistents event durations and starts"
-
-            data = np.zeros((2, len(starts)))
-            data[0, :] = np.array(starts) * fs
-            data[1, :] = np.array(durations) * fs
     else:
         raise Exception("No events'path given")
+
+    assert len(starts) == len(durations), "Inconsistents event durations and starts"
+
+    data = np.zeros((2, len(starts)))
+    data[0, :] = starts
+    data[1, :] = durations
 
     return data

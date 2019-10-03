@@ -167,7 +167,6 @@ class EventDataset(Dataset):
                     data = get_events(
                         filename="{}/{}".format(h5_directory, record),
                         event_params=event,
-                        fs=referential_fs,
                     )
 
                     number_of_events += data.shape[-1]
@@ -177,6 +176,8 @@ class EventDataset(Dataset):
                     }
 
                     for start, duration in zip(*data):
+                        start *= referential_fs
+                        duration *= referential_fs
                         if referential_window_size / duration > self.minimum_overlap:
                             stop = start + duration
                             duration_overlap = duration * self.minimum_overlap
@@ -312,7 +313,7 @@ class EventDataset(Dataset):
 
         signal_sizes = self.signals[record]["size"]
 
-        t = {block_name: np.arange(signal_size) for block_name, signal_size in signal_sizes.items()}
+        t = {block_name: np.arange(signal_size) / self.fs[block_name] for block_name, signal_size in signal_sizes.items()}
 
         number_of_batches_in_record = set([
             (signal_sizes[block_name] - read_size[block_name]) // batch_overlap_size[block_name] + 1
@@ -430,16 +431,15 @@ class EventDataset(Dataset):
         for event_name, event in self.events[record].items():
             starts, durations = event["data"][0, :], event["data"][1, :]
 
-            referential_window_size = self.window_sizes[self.referential_block]
-            referential_index = int(index * referential_window_size)
+            index = index * self.window
 
             # Relative start stop
-            starts_relative = (starts - referential_index) / referential_window_size
-            durations_relative = durations / referential_window_size
+            starts_relative = (starts - index) / self.window
+            durations_relative = durations / self.window
             stops_relative = starts_relative + durations_relative
 
             valid_indexes = self.get_valid_events_index(
-                referential_index, starts, durations, referential_window_size)
+                index, starts, durations, self.window)
 
             for valid_index in valid_indexes:
                 events_data.append((max(0, float(starts_relative[valid_index])),

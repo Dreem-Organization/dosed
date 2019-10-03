@@ -109,23 +109,24 @@ def test_dosed4():
     fs = 256
     x = {
         "raw": torch.rand(batch_size, number_of_raw_channels, window_duration * fs),
-        "spec": torch.rand(batch_size, number_of_spec_channels,
-                           spectrogram_fsize, window_duration * fs),
+        "spectrogram": torch.rand(batch_size, number_of_spec_channels,
+                                  spectrogram_fsize, window_duration * fs),
     }
 
     input_shapes = {
         "raw": (number_of_raw_channels, window_duration * fs),
-        "spec": (number_of_spec_channels, spectrogram_fsize, window_duration * fs),
+        "spectrogram": (number_of_spec_channels, spectrogram_fsize, window_duration * fs),
     }
 
     # number of classes
     number_of_classes = 3
 
     # default events
-    default_event_sizes = [1 * fs, 2 * fs]
+    default_event_sizes = [1, 2]
 
     net = DOSED4(
         input_shapes=input_shapes,
+        window=window_duration,
         number_of_classes=number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,
@@ -135,7 +136,7 @@ def test_dosed4():
     )
     localizations, classifications, localizations_default = net.forward(x)
     number_of_default_events = sum([
-        int(window_duration * fs / default_event_size * 2)
+        int(window_duration / default_event_size * 2)
         for default_event_size in default_event_sizes]
     )
     assert localizations.shape == (batch_size, number_of_default_events, 2)
@@ -152,22 +153,23 @@ def test_save_load():
     fs = 256
     x = {
         "raw": torch.rand(batch_size, number_of_raw_channels, window_duration * fs),
-        "spec": torch.rand(batch_size, number_of_spec_channels,
-                           spectrogram_fsize, window_duration * fs),
+        "spectrogram": torch.rand(batch_size, number_of_spec_channels,
+                                  spectrogram_fsize, window_duration * fs),
     }
     input_shapes = {
         "raw": [number_of_raw_channels, window_duration * fs],
-        "spec": [number_of_spec_channels, spectrogram_fsize, window_duration * fs],
+        "spectrogram": [number_of_spec_channels, spectrogram_fsize, window_duration * fs],
     }
 
     net_parameters = {
         "input_shapes": input_shapes,
+        "window": window_duration,
         "number_of_classes": 3,
         "detection_parameters": {
             "overlap_non_maximum_suppression": 0.5,
             "classification_threshold": 0.5,
         },
-        "default_event_sizes": [64],
+        "default_event_sizes": [3],
     }
     net = DOSED4(
         **net_parameters
@@ -192,14 +194,17 @@ def test_save_load():
 def test_nelement():
     net_parameters = {
         "input_shapes": {"raw": [1, 20]},
+        "window": 10,
         "number_of_classes": 3,
         "detection_parameters": {
             "overlap_non_maximum_suppression": 0.5,
             "classification_threshold": 0.5,
         },
         "default_event_sizes": [10],
+        "convolution_layers": {"raw": "[[2 , (5,), (1,), (0,), (2,)]] + "
+                                      "[[4 , (5,), (1,), (0,), (2,)]]"},
     }
     net = DOSED4(
         **net_parameters
     )
-    assert net.nelement == 284
+    assert net.nelement == 176

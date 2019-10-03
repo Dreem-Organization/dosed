@@ -11,7 +11,7 @@ def test_full_training():
     window = 1  # in seconds
 
     signals = [
-        {'name': 'eeg_raw',
+        {'name': 'raw',
          'signals': [{'h5_paths': ['/eeg_0'],
                       'fs': 64}],
          'fs': 32,
@@ -23,7 +23,7 @@ def test_full_training():
                  }}
          ]
          },
-        {'name': 'eeg_spectrogram',
+        {'name': 'spectrogram',
          'signals': [{'h5_paths': ['/eeg_1'],
                       'fs': 64}],
          'fs': 64,
@@ -66,10 +66,11 @@ def test_full_training():
     )
 
     # default events
-    default_event_sizes = [1 * dataset.fs, 0.5 * dataset.fs]
+    default_event_sizes = [1, 0.5]
 
     net = DOSED4(
-        input_shape=dataset.input_shape,
+        input_shapes=dataset.input_shapes,
+        window=window,
         number_of_classes=dataset.number_of_classes,
         detection_parameters={
             "overlap_non_maximum_suppression": 0.5,

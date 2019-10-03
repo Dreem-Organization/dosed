@@ -26,7 +26,7 @@ class DOSED4(BaseNet):
 
     def __init__(self,
                  input_shapes,
-                 window_size,
+                 window,
                  number_of_classes,
                  detection_parameters,
                  default_event_sizes,
@@ -47,38 +47,38 @@ class DOSED4(BaseNet):
 
         super(DOSED4, self).__init__()
         self.input_shapes = input_shapes
-        self.window_size = window_size
+        self.window = window
         self.number_of_classes = number_of_classes + 1  # eventless, real events
 
         detection_parameters["number_of_classes"] = self.number_of_classes
         self.detector = Detection(**detection_parameters)
 
-        self.convolution_layers = {block_name: eval(convolution_layer, {}, {})
-                                   for block_name, convolution_layer in convolution_layers.items()}
+        self.convolution_layers = {signal_name: eval(convolution_layer, {}, {})
+                                   for signal_name, convolution_layer in convolution_layers.items()}
         self.pdrop = pdrop
 
-        if max(default_event_sizes) > self.window_size:
+        if max(default_event_sizes) > self.window:
             warnings.warn("Detected default_event_sizes larger than"
                           " input_shape! Consider reducing them")
 
         # Localizations to default tensor
         self.localizations_default = get_overlerapping_default_events(
-            window_size=self.window_size,
+            window_size=self.window,
             default_event_sizes=default_event_sizes
         )
 
         # model
         self.blocks_model = nn.ModuleDict()
-        for block_name in self.convolution_layers:
-            layers = self.convolution_layers[block_name]
-            if len(self.input_shapes[block_name]) == 3:
-                self.blocks_model[block_name] = nn.ModuleList(
+        for signal_name in self.convolution_layers:
+            layers = self.convolution_layers[signal_name]
+            if len(self.input_shapes[signal_name]) == 3:
+                self.blocks_model[signal_name] = nn.ModuleList(
                     [
                         nn.Sequential(
                             OrderedDict([
                                 ("conv_{}".format(k), nn.Conv2d(
                                     in_channels=layers[k - 1][0]
-                                    if k > 0 else self.input_shapes[block_name][0],
+                                    if k > 0 else self.input_shapes[signal_name][0],
                                     out_channels=layers[k][0],
                                     kernel_size=layers[k][1],
                                     stride=layers[k][2],
@@ -95,13 +95,13 @@ class DOSED4(BaseNet):
                     ]
                 )
             else:
-                self.blocks_model[block_name] = nn.ModuleList(
+                self.blocks_model[signal_name] = nn.ModuleList(
                     [
                         nn.Sequential(
                             OrderedDict([
                                 ("conv_{}".format(k), nn.Conv1d(
                                     in_channels=layers[k - 1][0]
-                                    if k > 0 else self.input_shapes[block_name][0],
+                                    if k > 0 else self.input_shapes[signal_name][0],
                                     out_channels=layers[k][0],
                                     kernel_size=layers[k][1],
                                     stride=layers[k][2],
@@ -128,20 +128,20 @@ class DOSED4(BaseNet):
                 x = ((x - kernel + 2 * pad) // stride + 1) // pool
             return x
 
-        in_channels = set([self.convolution_layers[block_name][-1][0]
-                           for block_name in self.convolution_layers])
+        in_channels = set([self.convolution_layers[signal_name][-1][0]
+                           for signal_name in self.convolution_layers])
         assert len(in_channels) == 1, in_channels
         in_channels = in_channels.pop()
 
         kernel_size = 0
-        for block_name in self.convolution_layers:
-            input_shape = self.input_shapes[block_name]
+        for signal_name in self.convolution_layers:
+            input_shape = self.input_shapes[signal_name]
             if len(input_shape) == 3:
-                fsz_final = conv(input_shape[-2], self.convolution_layers[block_name], dim=0)
-                tsz_final = conv(input_shape[-1], self.convolution_layers[block_name], dim=1)
+                fsz_final = conv(input_shape[-2], self.convolution_layers[signal_name], dim=0)
+                tsz_final = conv(input_shape[-1], self.convolution_layers[signal_name], dim=1)
                 kernel_size += tsz_final * fsz_final
             else:
-                tsz_final = conv(input_shape[-1], self.convolution_layers[block_name], dim=0)
+                tsz_final = conv(input_shape[-1], self.convolution_layers[signal_name], dim=0)
                 kernel_size += tsz_final
 
         self.localizations = nn.Conv1d(
@@ -170,12 +170,12 @@ class DOSED4(BaseNet):
         return torch.cat(tuple(x.values()), 2)
 
     def forward(self, x):
-        x = {block_name: x[block_name] for block_name in self.blocks_model}
+        x = {signal_name: x[signal_name] for signal_name in self.blocks_model}
 
-        for block_name, blocks in self.blocks_model.items():
+        for signal_name, blocks in self.blocks_model.items():
             for block in blocks:
-                x[block_name] = block(x[block_name])
-            x[block_name] = self.flatten(x[block_name])
+                x[signal_name] = block(x[signal_name])
+            x[signal_name] = self.flatten(x[signal_name])
 
         x = self.reduce(x)
 
