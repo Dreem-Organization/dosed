@@ -108,7 +108,6 @@ class EventDataset(Dataset):
         data_signals, data_properties = zip(*data)
 
         self.blocks_names = list(data_signals[0].keys())
-        self.referential_block = sorted(self.blocks_names)[0]
 
         fs = {block_name: set([properties[block_name]["fs"] for properties in data_properties])
               for block_name in self.blocks_names}
@@ -136,9 +135,14 @@ class EventDataset(Dataset):
             number_of_windows = min(set([signal_sizes[block_name] // self.window_sizes[block_name]
                                          for block_name in self.blocks_names]))
 
+            shortest_signal_name = min(sorted({block: signal_sizes[block] / self.fs[block]
+                                               for block in self.blocks_names}.items()),
+                                       key=lambda x: x[1])[0]
+
             self.signals[record] = {
                 "data": data,
                 "size": signal_sizes,
+                "duration": int(signal_sizes[shortest_signal_name] / self.fs[shortest_signal_name])
             }
 
             self.index_to_record.extend([
@@ -153,14 +157,9 @@ class EventDataset(Dataset):
                 number_of_events = 0
                 events_indexes = set()
 
-                max_index_block = min(sorted({block: signal_sizes[block] / self.fs[block]
-                                              for block in self.blocks_names}.items()),
-                                      key=lambda x: x[1])[0]
-                referential_window_size = self.window_sizes[self.referential_block]
-                referential_fs = self.fs[self.referential_block]
+                shortest_window_size = self.window_sizes[shortest_signal_name]
 
-                max_index = signal_sizes[max_index_block] - self.window_sizes[max_index_block]
-                max_index = int(max_index * referential_fs / self.fs[max_index_block])
+                max_index = signal_sizes[shortest_signal_name] - shortest_window_size
 
                 for label, event in enumerate(events):
 
@@ -176,13 +175,13 @@ class EventDataset(Dataset):
                     }
 
                     for start, duration in zip(*data):
-                        start *= referential_fs
-                        duration *= referential_fs
-                        if referential_window_size / duration > self.minimum_overlap:
+                        start *= self.fs[shortest_signal_name]
+                        duration *= self.fs[shortest_signal_name]
+                        if shortest_window_size / duration > self.minimum_overlap:
                             stop = start + duration
                             duration_overlap = duration * self.minimum_overlap
                             start_valid_index = int(round(
-                                max(0, start + duration_overlap - referential_window_size + 1)))
+                                max(0, start + duration_overlap - shortest_window_size + 1)))
                             end_valid_index = int(round(
                                 min(max_index + 1, stop - duration_overlap)))
 
@@ -190,19 +189,19 @@ class EventDataset(Dataset):
                             # Check borders
                             if self.get_valid_events_index(start_valid_index - 1,
                                                            [start], [duration],
-                                                           referential_window_size):
+                                                           shortest_window_size):
                                 indexes.append(start_valid_index - 1)
                             if self.get_valid_events_index(end_valid_index + 1,
                                                            [start], [duration],
-                                                           referential_window_size):
+                                                           shortest_window_size):
                                 indexes.append(end_valid_index + 1)
                             events_indexes.update(indexes)
 
                 no_events_indexes = set(range(max_index + 1))
                 no_events_indexes = np.array(list(no_events_indexes.difference(events_indexes)))
                 events_indexes = np.array(list(events_indexes))
-                no_events_indexes = no_events_indexes / referential_window_size
-                events_indexes = events_indexes / referential_window_size
+                no_events_indexes = no_events_indexes / shortest_window_size
+                events_indexes = events_indexes / shortest_window_size
 
                 if number_of_events > 0:
                     self.index_to_record_event.extend([
@@ -301,8 +300,8 @@ class EventDataset(Dataset):
 
         # stride = overlap_size
         # batch_size = batch
-
-        strides = {block_name: int((stride if stride is not None else self.window) * fs)
+        stride = stride if stride is not None else self.window
+        strides = {block_name: int(stride * fs)
                    for block_name, fs in self.fs.items()}
         # stride at a batch level
         batch_overlap_size = {block_name: stride * batch_size
@@ -311,17 +310,14 @@ class EventDataset(Dataset):
         read_size = {block_name: (batch_size - 1) * strides[block_name] + window_size
                      for block_name, window_size in self.window_sizes.items()}
 
-        signal_sizes = self.signals[record]["size"]
+        duration = self.signals[record]["duration"]
+        t = np.arange(duration)
 
-        t = {block_name: np.arange(signal_size) / self.fs[block_name] for block_name, signal_size in signal_sizes.items()}
-
-        number_of_batches_in_record = set([
-            (signal_sizes[block_name] - read_size[block_name]) // batch_overlap_size[block_name] + 1
-            for block_name in self.blocks_names]).pop()
+        number_of_batches_in_record = int(
+            (duration - (batch_size - 1) * stride + self.window) // (stride * batch_size) + 1)
 
         for batch in range(number_of_batches_in_record):
             signal_strided = dict()
-            t_strided = dict()
 
             for block_name in self.blocks_names:
                 start = batch_overlap_size[block_name] * batch
@@ -336,22 +332,20 @@ class EventDataset(Dataset):
                         strides=(signal.strides[-1] * strides[block_name], *signal.strides),
                     )
                 )
-                time = t[block_name][start:stop]
-                t_strided[block_name] = as_strided(
+                time = t[start:stop]
+                t_strided = as_strided(
                     x=time,
-                    shape=(batch_size, self.window_sizes[block_name]),
-                    strides=(time.strides[0] * strides[block_name], time.strides[0]),
+                    shape=(batch_size, self.window),
+                    strides=(int(time.strides[0] * stride), time.strides[0]),
                 )
 
-            yield signal_strided, t_strided[self.referential_block]
+            yield signal_strided, t_strided
 
-        batch_end = set([(
-            signal_sizes[block_name] - number_of_batches_in_record *
-            batch_overlap_size[block_name] - self.window_sizes[block_name]
-        ) // strides[block_name] + 1 for block_name in self.blocks_names]).pop()
+        batch_end = int((duration - number_of_batches_in_record *
+                         stride * batch_size - self.window) // stride + 1)
+
         if batch_end > 0:
             signal_strided = dict()
-            t_strided = dict()
 
             for block_name in self.blocks_names:
                 read_size_end = (batch_end - 1) * \
@@ -369,14 +363,14 @@ class EventDataset(Dataset):
                     )
                 )
 
-                time = t[block_name][start:end]
-                t_strided[block_name] = as_strided(
+                time = t[start:end]
+                t_strided = as_strided(
                     x=time,
-                    shape=(batch_end, self.window_sizes[block_name]),
-                    strides=(time.strides[0] * strides[block_name], time.strides[0]),
+                    shape=(batch_end, self.window),
+                    strides=(int(time.strides[0] * stride), time.strides[0]),
                 )
 
-            yield signal_strided, t_strided[self.referential_block]
+            yield signal_strided, t_strided
 
     def plot(self, idx, channels):
         """Plot events and data from channels for record and index found at
