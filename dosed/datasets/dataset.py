@@ -141,8 +141,7 @@ class EventDataset(Dataset):
 
             self.signals[record] = {
                 "data": data,
-                "size": signal_sizes,
-                "duration": int(signal_sizes[shortest_signal_name] / self.fs[shortest_signal_name])
+                "duration": signal_sizes[shortest_signal_name] / self.fs[shortest_signal_name]
             }
 
             self.index_to_record.extend([
@@ -311,7 +310,7 @@ class EventDataset(Dataset):
                      for block_name, window_size in self.window_sizes.items()}
 
         duration = self.signals[record]["duration"]
-        t = np.arange(duration)
+        t = np.arange(int(duration))
 
         number_of_batches_in_record = int(
             (duration - (batch_size - 1) * stride + self.window) // (stride * batch_size) + 1)
@@ -332,12 +331,15 @@ class EventDataset(Dataset):
                         strides=(signal.strides[-1] * strides[block_name], *signal.strides),
                     )
                 )
-                time = t[start:stop]
-                t_strided = as_strided(
-                    x=time,
-                    shape=(batch_size, self.window),
-                    strides=(int(time.strides[0] * stride), time.strides[0]),
-                )
+
+            start = int(stride * batch_size * batch)
+            stop = int(stride * batch_size * batch + (batch_size - 1) * stride + self.window)
+            time = t[start:stop]
+            t_strided = as_strided(
+                x=time,
+                shape=(batch_size, self.window),
+                strides=(int(time.strides[0] * stride), time.strides[0]),
+            )
 
             yield signal_strided, t_strided
 
@@ -363,12 +365,15 @@ class EventDataset(Dataset):
                     )
                 )
 
-                time = t[start:end]
-                t_strided = as_strided(
-                    x=time,
-                    shape=(batch_end, self.window),
-                    strides=(int(time.strides[0] * stride), time.strides[0]),
-                )
+            start = int(stride * batch_size * number_of_batches_in_record)
+            stop = int(stride * batch_size * number_of_batches_in_record +
+                       (batch_end - 1) * stride + self.window)
+            time = t[start:end]
+            t_strided = as_strided(
+                x=time,
+                shape=(batch_end, self.window),
+                strides=(int(time.strides[0] * stride), time.strides[0]),
+            )
 
             yield signal_strided, t_strided
 
@@ -425,15 +430,15 @@ class EventDataset(Dataset):
         for event_name, event in self.events[record].items():
             starts, durations = event["data"][0, :], event["data"][1, :]
 
-            index = index * self.window
+            event_index = index * self.window
 
             # Relative start stop
-            starts_relative = (starts - index) / self.window
+            starts_relative = (starts - event_index) / self.window
             durations_relative = durations / self.window
             stops_relative = starts_relative + durations_relative
 
             valid_indexes = self.get_valid_events_index(
-                index, starts, durations, self.window)
+                event_index, starts, durations, self.window)
 
             for valid_index in valid_indexes:
                 events_data.append((max(0, float(starts_relative[valid_index])),

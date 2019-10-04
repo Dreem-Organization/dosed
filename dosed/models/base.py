@@ -80,7 +80,7 @@ class BaseNet(nn.Module):
             predictions[record] = []
 
             signal_duration = inference_dataset.signals[record]["duration"]
-            result = np.zeros((self.number_of_classes - 1, signal_duration))
+            result = np.zeros((self.number_of_classes - 1, int(signal_duration)))
 
             for signals, times in inference_dataset.get_record_batch(
                     record,
