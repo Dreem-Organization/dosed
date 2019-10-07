@@ -127,7 +127,8 @@ class EventDataset(Dataset):
         self.input_shapes = {block_name: input_shape_block.pop()
                              for block_name, input_shape_block in input_shapes.items()}
 
-        self.window_sizes = {block_name: int(window * fs) for block_name, fs in self.fs.items()}
+        self.window_sizes = {block_name: int(self.window * fs)
+                             for block_name, fs in self.fs.items()}
 
         ##################
 
@@ -141,7 +142,7 @@ class EventDataset(Dataset):
 
             self.signals[record] = {
                 "data": data,
-                "duration": signal_sizes[shortest_signal_name] / self.fs[shortest_signal_name]
+                "duration": int(signal_sizes[shortest_signal_name] / self.fs[shortest_signal_name])
             }
 
             self.index_to_record.extend([
@@ -156,9 +157,9 @@ class EventDataset(Dataset):
                 number_of_events = 0
                 events_indexes = set()
 
-                shortest_window_size = self.window_sizes[shortest_signal_name]
+                shortest_window_size = self.window * self.fs[shortest_signal_name]
 
-                max_index = signal_sizes[shortest_signal_name] - shortest_window_size
+                max_index = int(signal_sizes[shortest_signal_name] - shortest_window_size) - 1
 
                 for label, event in enumerate(events):
 
@@ -310,7 +311,7 @@ class EventDataset(Dataset):
                      for block_name, window_size in self.window_sizes.items()}
 
         duration = self.signals[record]["duration"]
-        t = np.arange(int(duration))
+        t = np.arange(duration)
 
         number_of_batches_in_record = int(
             (duration - (batch_size - 1) * stride + self.window) // (stride * batch_size) + 1)
