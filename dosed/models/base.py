@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from ..utils import binary_to_array, merge_events
+from ..utils import merge_events
 
 
 class BaseNet(nn.Module):
