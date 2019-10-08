@@ -159,7 +159,7 @@ class EventDataset(Dataset):
 
                 shortest_window_size = self.window * self.fs[shortest_signal_name]
 
-                max_index = int(signal_sizes[shortest_signal_name] - shortest_window_size) - 1
+                max_index = int(signal_sizes[shortest_signal_name] - shortest_window_size) - 2
 
                 for label, event in enumerate(events):
 

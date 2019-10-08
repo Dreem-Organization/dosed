@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from ..utils import binary_to_array
+from ..utils import binary_to_array, merge_events
 
 
 class BaseNet(nn.Module):
@@ -78,22 +78,21 @@ class BaseNet(nn.Module):
         predictions = {}
         for record in inference_dataset.records:
             predictions[record] = []
-
-            signal_duration = inference_dataset.signals[record]["duration"]
-            result = np.zeros((self.number_of_classes - 1, signal_duration))
-
+            result = [[] for _ in range(self.number_of_classes - 1)]
             for signals, times in inference_dataset.get_record_batch(
                     record,
                     batch_size=int(batch_size),
                     stride=overlap):
-                x = {signal_type: signal.to(self.device) for signal_type, signal in signals.items()}
+                x = {signal_name: signal.to(self.device) for signal_name, signal in signals.items()}
                 batch_predictions = self.predict(x)
+
                 for events, time in zip(batch_predictions, times):
                     for event in events:
-                        start = int(round(event[0] * window + time[0]))
-                        stop = int(round(event[1] * window + time[0]))
-                        result[event[2], start:stop] = 1
-            predicted_events = [binary_to_array(k) for k in result]
+                        start = event[0] * window + time[0]
+                        stop = event[1] * window + time[0]
+                        result[event[2]].append((start, stop))
+
+            predicted_events = [merge_events(k) for k in result]
             assert len(predicted_events) == self.number_of_classes - 1
             for event_num in range(self.number_of_classes - 1):
                 predictions[record].append(predicted_events[event_num])
