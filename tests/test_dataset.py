@@ -22,16 +22,64 @@ def records(h5_directory):
 def signals():
     return [
         {'name': 'eeg_raw',
-         'signals': [{'h5_paths': ['/eeg_0'],
-                      'fs': 64}],
+         'signals': [
+             {'name': 'eeg_bandpass',
+              'signals': [{'h5_paths': ['/eeg_0'],
+                           'fs': 64}],
+              'fs': 64,
+              'preprocessing':[
+                  {"name": "bandpass",
+                   "args": {
+                       "frequency_band": [0.1, 0.5],
+                       "order": 4,
+                       "type": "butter"
+                   }},
+                  {"name": "clip_and_normalize",
+                   "args": {
+                       "min_value": -150,
+                       "max_value": 150,
+                   }}
+              ]
+              },
+             {'name': 'eeg_highpass',
+              'signals': [{'h5_paths': ['/eeg_0'],
+                           'fs': 64}],
+              'fs': 64,
+              'preprocessing':[
+                  {"name": "highpass",
+                   "args": {
+                       "frequency_cut": 0.5,
+                       "order": 4,
+                       "type": "butter"
+                   }},
+                  {"name": "clip",
+                   "args": {
+                           "max_value": 150,
+                   }}
+              ]
+              },
+             {'name': 'eeg_lowpass',
+              'signals': [{'h5_paths': ['/eeg_0'],
+                           'fs': 64}],
+              'fs': 64,
+              'preprocessing':[
+                  {"name": "lowpass",
+                   "args": {
+                       "frequency_cut": 0.1,
+                       "order": 4,
+                       "type": "butter"
+                   }},
+                  {"name": "mask_clip_and_normalize",
+                   "args": {
+                           "min_value": -150,
+                           "max_value": 150,
+                           "mask_value": -1,
+                   }}
+              ]
+              },
+         ],
          'fs': 32,
-         'preprocessing': [
-             {"name": "clip_and_normalize",
-                 "args": {
-                     "min_value": -150,
-                     "max_value": 150,
-                 }}
-         ]
+         'preprocessing': []
          },
         {'name': 'eeg_spectrogram',
          'signals': [{'h5_paths': ['/eeg_1'],
@@ -93,14 +141,14 @@ def test_dataset(signals, events, h5_directory, records):
         assert signal_type in ["eeg_raw", "eeg_spectrogram"]
         fs = dataset.fs[signal_type]
         if signal_type == "eeg_raw":
-            assert tuple(signals[signal_type].shape) == (1, int(window * fs))
+            assert tuple(signals[signal_type].shape) == (3, int(window * fs))
         elif signal_type == "eeg_spectrogram":
             assert tuple(signals[signal_type].shape) == (1, 5, int(window * fs))
 
     if "eeg_spectrogram" not in signals.keys():
         assert signals["eeg_raw"][0][6].tolist() == -0.11056432873010635
     else:
-        assert signals["eeg_raw"][0][6].tolist() == -0.05878538265824318
+        assert signals["eeg_raw"][0][6].tolist() == -0.008551005274057388
         assert signals["eeg_spectrogram"][0][4][6].tolist() == 0.0006360001862049103
 
 
@@ -123,7 +171,7 @@ def test_balanced_dataset_ratio_1(h5_directory, signals, events, records):
             assert signal_type in ["eeg_raw", "eeg_spectrogram"]
             fs = dataset.fs[signal_type]
             if signal_type == "eeg_raw":
-                assert tuple(signals[signal_type].shape) == (1, int(fs))
+                assert tuple(signals[signal_type].shape) == (3, int(fs))
             elif signal_type == "eeg_spectrogram":
                 assert tuple(signals[signal_type].shape) == (1, 5, int(fs))
 

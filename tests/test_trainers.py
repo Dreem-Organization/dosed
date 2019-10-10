@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from dosed.datasets import BalancedEventDataset
 from dosed.models import DOSED4
@@ -6,13 +7,19 @@ from dosed.trainers import trainers
 
 
 def test_full_training():
+    seed = 42
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     h5_directory = "./tests/test_files/h5/"
 
     window = 1  # in seconds
 
     signals = [
         {'name': 'raw',
-         'signals': [{'h5_paths': ['/eeg_0'],
+         'signals': [{'h5_paths': ['/eeg_0', '/eeg_1'],
                       'fs': 64}],
          'fs': 32,
          'preprocessing': [
@@ -95,7 +102,7 @@ def test_full_training():
         net,
         optimizer_parameters=optimizer_parameters,
         loss_specs=loss_specs,
-        epochs=2,
+        epochs=3,
     )
 
     best_net_train, best_metrics_train, best_threshold_train = trainer.train(
