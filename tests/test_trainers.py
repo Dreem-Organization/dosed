@@ -8,7 +8,7 @@ from dosed.trainers import trainers
 
 
 def test_full_training():
-    seed = 42
+    seed = 0
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)

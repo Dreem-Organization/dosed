@@ -307,3 +307,18 @@ def test_cache_no_cache(h5_directory, signals, events, records, cache_directory)
         **dataset_parameters,
     )
     assert os.path.isdir(cache_directory)
+
+
+def test_plot(h5_directory, signals, events, records):
+    dataset = BalancedEventDataset(
+        h5_directory=h5_directory,
+        signals=signals,
+        events=events,
+        window=1,
+        records=None,
+        minimum_overlap=0.5,
+        transformations=lambda x: x,
+        ratio_positive=0,
+    )
+
+    dataset.plot(5, {"eeg_raw": [1, 2], "eeg_spectrogram": [0]})

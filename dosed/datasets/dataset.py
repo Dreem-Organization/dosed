@@ -378,46 +378,6 @@ class EventDataset(Dataset):
 
             yield signal_strided, t_strided
 
-    def plot(self, idx, channels):
-        """Plot events and data from channels for record and index found at
-           idx"""
-
-        import matplotlib.pyplot as plt
-        signal, events = self.extract_balanced_data(
-            record=self.index_to_record_event[idx]["record"],
-            max_index=self.index_to_record_event[idx]["max_index"])
-
-        non_valid_indexes = np.where(np.array(channels) is None)[0]
-        signal = np.delete(signal, non_valid_indexes, axis=0)
-        channels = [channel for channel in channels if channel is not None][::-1]
-
-        num_signals = len(channels)
-        signal_size = len(signal[0])
-        events_numpy = events.numpy()
-        plt.figure(figsize=(10 * 4, 2 * num_signals))
-        gs = gridspec.GridSpec(num_signals, 1)
-        gs.update(wspace=0., hspace=0.)
-        for channel_num, channel in enumerate(channels):
-            assert signal_size == len(signal[channel_num])
-            signal_mean = signal.numpy()[channel_num].mean()
-            ax = plt.subplot(gs[channel_num, 0])
-            ax.set_ylim(-0.55, 0.55)
-            ax.plot(signal.numpy()[channel_num], alpha=0.3)
-            for event in events_numpy:
-                ax.fill([event[0] * signal_size, event[1] * signal_size],
-                        [signal_mean, signal_mean],
-                        alpha=0.5,
-                        linewidth=30,
-                        color="C{}".format(int(event[-1])))
-            if channel_num == 0:
-                # print(EVENT_DICT[event[2]])
-                offset = (1. / num_signals) * 1.1
-                step = (1. / num_signals) * 0.78
-            plt.gcf().text(0.915, offset + channel_num * step,
-                           channel, fontsize=14)
-        plt.show()
-        plt.close()
-
     def get_sample(self, record, index):
         """Return a sample [sata, events] from a record at a particularindex"""
 
@@ -512,3 +472,47 @@ class BalancedEventDataset(EventDataset):
             signal_data, events_data = self.get_sample(record, index)
 
         return signal_data, events_data
+
+    def plot(self, idx, channels):
+        """Plot events and data from channels for record and index found at idx
+        channels must be a dictionary of lists of int as {"raw": [0,2,3], "spectrogram": [2]}
+        """
+
+        import matplotlib.pyplot as plt
+        signals, events = self.extract_balanced_data(
+            record=self.index_to_record_event[idx]["record"],
+            max_index=self.index_to_record_event[idx]["max_index"],
+            events_indexes=self.index_to_record_event[idx]["events_indexes"],
+            no_events_indexes=self.index_to_record_event[idx]["no_events_indexes"])
+
+        non_valid_indexes = np.where(np.array(channels) is None)[0]
+        signals = {name: np.delete(signals[name], non_valid_indexes, axis=0) for name in signals}
+        num_signals = sum([len(channel) for channel in channels.values()])
+        events_numpy = events.numpy()
+        plt.figure(figsize=(10 * 4, 2 * num_signals))
+        gs = gridspec.GridSpec(num_signals, 1)
+        gs.update(wspace=0., hspace=0.)
+        i = 0
+        for name, channels in channels.items():
+            signal = signals[name]
+            fs = signal.size()[-1] / self.window
+            for channel_num in channels:
+                signal_mean = signal.numpy()[channel_num].mean()
+                ax = plt.subplot(gs[channel_num, 0])
+                ax.set_ylim(-0.55, 0.55)
+                ax.plot(signal.numpy()[channel_num], alpha=0.3)
+                for event in events_numpy:
+                    ax.fill([event[0], event[1]],
+                            [signal_mean, signal_mean],
+                            alpha=0.5,
+                            linewidth=30,
+                            color="C{}".format(int(event[-1])))
+                if i == 0:
+                    # print(EVENT_DICT[event[2]])
+                    offset = (1. / num_signals) * 1.1
+                    step = (1. / num_signals) * 0.78
+                i += 1
+                plt.gcf().text(0.915, offset + channel_num * step,
+                               name + " " + str(channel_num), fontsize=14)
+        plt.show()
+        plt.close()
