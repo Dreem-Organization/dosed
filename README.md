@@ -15,6 +15,12 @@ and extended in:
 	DOSED: a deep learning approach to detect multiple sleep micro-events in EEG signal
 	https://arxiv.org/abs/1812.04079
 
+also used in:
+
+	Valentin Thorey and Albert Bou Hernandez and Pierrick J. Arnal and Emmanuel H. During.
+	AI vs Humans for the diagnosis of sleep apnea
+	https://arxiv.org/abs/1906.09936
+
 ### Introduction
 
 DOSED in a deep learning approach to jointly predicts locations, durations and types of events in time series.
