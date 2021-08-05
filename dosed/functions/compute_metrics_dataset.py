@@ -63,8 +63,8 @@ def compute_metrics_dataset(
     if found_some_events is False:
         return -1
 
-    for metric in metrics.keys():
-        metrics_test[event_num][metric] = np.nanmean(
-            np.array(metrics_test[event_num][metric]))
+    for event_num in range(network.number_of_classes - 1):
+        for metric in metrics.keys():
+            metrics_test[event_num][metric] = np.nanmean(np.array(metrics_test[event_num][metric]))
 
     return metrics_test
