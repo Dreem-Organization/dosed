@@ -55,16 +55,20 @@ def compute_metrics_dataset(
 
             # Compute_metrics(events, predicted_events, threshold)
             for metric in metrics.keys():
-                metrics_test[event_num][metric].append(metrics[metric](
-                    predicted_events,
-                    events))
+                metrics_test[event_num][metric].append(metrics[metric](predicted_events, events))
 
     # If for any event and record the network predicted events, return -1
     if found_some_events is False:
         return -1
 
+    # Else, average the metrics for the predictions for each event and record
     for event_num in range(network.number_of_classes - 1):
         for metric in metrics.keys():
-            metrics_test[event_num][metric] = np.nanmean(np.array(metrics_test[event_num][metric]))
+            num_records_with_found_events = len(metrics_test[event_num][metric])
+            num_records = len(test_dataset.records)
+            if (num_records_with_found_events > 0):
+                metrics_test[event_num][metric] = np.nanmean(np.array(metrics_test[event_num][metric])) * (num_records_with_found_events / num_records)
+            else:
+                metrics_test[event_num][metric] = -1
 
     return metrics_test
