@@ -2,7 +2,7 @@ Cython==0.29
 h5py==2.8.0
 tqdm==4.28.1
 boto3==1.9.31
-joblib==0.12.5
+joblib==1.1.1
 matplotlib==3.0.2
 pyedflib==0.1.14
 torch==1.0.0
